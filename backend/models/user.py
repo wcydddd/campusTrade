@@ -1,58 +1,48 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
-from bson import ObjectId
+from enum import Enum
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+class UserRole(str,Enum):
+    USER='user'
+    ADMIN='admin'
 
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
 
-    @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
-class UserBase(BaseModel):
+# 用户注册请求
+class UserCreate(BaseModel):
     email: EmailStr
-    name: str
-    university: str
+    password: str = Field(..., min_length=6)
+    username: str = Field(..., min_length=2, max_length=30)
 
-class UserCreate(UserBase):
-    password: str
-
+# 用户登录请求
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class UserInDB(UserBase):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+# 数据库中的用户
+class UserInDB(BaseModel):
+    id: Optional[str] = None
+    email: EmailStr
+    username: str
     hashed_password: str
-    verified: bool = False
-    reputation_score: float = 5.0
-    total_sales: int = 0
-    total_purchases: int = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+    role: UserRole = UserRole.USER
+    is_verified: bool = False
+    avatar_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime)
 
+    # 返回给前端的用户（不含密码）
 class UserResponse(BaseModel):
     id: str
-    email: str
-    name: str
-    university: str
-    verified: bool
-    reputation_score: float
-    total_sales: int
-    total_purchases: int
-    
-    class Config:
-        from_attributes = True
+    email: EmailStr
+    username: str
+    role: UserRole
+    is_verified: bool
+    avatar_url: Optional[str] = None
+    created_at: datetime
+
+
+# Token 响应
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse

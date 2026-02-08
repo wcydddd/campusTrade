@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils.database import connect_to_mongo, close_mongo_connection  # 改这里
 import uvicorn
-
+from routes.auth import router as auth_router 
 app = FastAPI(
     title="CampusTrade API",
     description="AI-Powered Campus Marketplace for Students",
@@ -19,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册路由
+app.include_router(auth_router)  # ← 加这行
 
 # 启动时连接数据库
 @app.on_event("startup")
