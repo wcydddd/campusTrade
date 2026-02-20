@@ -72,7 +72,7 @@ async def analyze_product_image(
 @router.post("/analyze-and-save")
 async def analyze_and_save_image(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    # current_user: dict = Depends(get_current_user)
 ):
     """
     AI 分析商品图片并保存图片到服务器
@@ -80,11 +80,11 @@ async def analyze_and_save_image(
     """
     
     # 检查用户是否已验证
-    if not current_user.get("is_verified", False):
-        raise HTTPException(
-            status_code=403,
-            detail="Only verified users can use AI features. Please verify your email first."
-        )
+    # if not current_user.get("is_verified", False):
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Only verified users can use AI features. Please verify your email first."
+    #     )
     
     # 检查文件格式
     file_ext = file.filename.split(".")[-1].lower() if file.filename else ""
