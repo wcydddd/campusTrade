@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils.database import connect_to_mongo, close_mongo_connection  # 改这里
 import uvicorn
 from routes.auth import router as auth_router 
+from routes.ai import router as ai_router
+from fastapi.staticfiles import StaticFiles
 app = FastAPI(
     title="CampusTrade API",
     description="AI-Powered Campus Marketplace for Students",
@@ -10,7 +12,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
-
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # CORS 配置
 app.add_middleware(
     CORSMiddleware,
@@ -22,7 +24,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth_router)  # ← 加这行
-
+app.include_router(ai_router)
 # 启动时连接数据库
 @app.on_event("startup")
 async def startup_event():

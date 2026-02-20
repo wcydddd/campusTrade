@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 10080
     
     # OpenAI
-    openai_api_key: str = ""
+    openai_api_key: str = "API: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"
     
     # Email
     smtp_server: str = "smtp.gmail.com"
