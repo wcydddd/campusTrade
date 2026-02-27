@@ -28,8 +28,8 @@ export default function Login() {
 
   const passwordError = !password
     ? "Password is required"
-    : password.length < 6
-      ? "Password must be at least 6 characters"
+    : password.length < 8
+      ? "Password must be at least 8 characters"
       : "";
 
   const isFormValid = !emailError && !passwordError;
