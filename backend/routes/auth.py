@@ -59,12 +59,18 @@ async def register(user_data: UserCreate):
             detail="Please use a university email address"
         )
 
-    # 2) 邮箱唯一
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # 2) 邮箱检查：已验证的不允许重复注册；未验证的允许覆盖
+    existing_user = await db.users.find_one({"email": email})
+    if existing_user:
+        if existing_user.get("is_verified", False):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        # 未验证：删除旧记录，允许重新注册
+        await db.users.delete_one({"_id": existing_user["_id"]})
+        await db.email_verifications.delete_many({"email": email})
 
-    # 3) 用户名唯一
-    if await db.users.find_one({"username": user_data.username}):
+    # 3) 用户名唯一（排除刚被删掉的同一邮箱旧记录）
+    existing_username = await db.users.find_one({"username": user_data.username})
+    if existing_username:
         raise HTTPException(status_code=400, detail="Username already taken")
 
     # 4) 插入用户
@@ -74,7 +80,7 @@ async def register(user_data: UserCreate):
         "username": user_data.username,
         "hashed_password": hash_password(user_data.password),
         "role": "user",
-        "is_verified": False,      # ✅ 关键：邮箱验证后才改 True
+        "is_verified": False,
         "avatar_url": None,
         "created_at": now
     }
@@ -154,7 +160,11 @@ async def send_email_code(req: SendCodeRequest):
     )
 
     # 7) 发邮件（明文验证码只通过邮件发给用户）
-    await send_verification_code(email=email, code=code)
+    try:
+        await send_verification_code(email=email, code=code)
+    except Exception as e:
+        print(f"[email] Send failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
     return {"message": "Verification code sent"}
 

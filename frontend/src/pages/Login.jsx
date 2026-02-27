@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { API_BASE } from "../api";
 
 export default function Login() {
   // 表单状态
@@ -10,6 +11,7 @@ export default function Login() {
   // 交互状态
   const [touched, setTouched] = useState({ email: false, password: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
@@ -34,19 +36,31 @@ export default function Login() {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setTouched({ email: true, password: true });
+    setError("");
     if (!isFormValid) return;
 
     setIsSubmitting(true);
-
-    // TODO: 对接真实登录 API（POST /auth/login）
-    setTimeout(() => {
-      console.log("Login successful with:", { email, password, rememberMe });
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Login failed");
+      }
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/home");
+    } catch (err) {
+      setError(err.message || "Login failed");
+    } finally {
       setIsSubmitting(false);
-      navigate("/");
-    }, 800);
+    }
   };
 
   return (
@@ -153,6 +167,21 @@ export default function Login() {
               </div>
             </div>
 
+            {error && (
+              <div className="text-sm">
+                <p className="text-red-600" role="alert">
+                  {error}
+                </p>
+                {(error.includes("Email not verified") || error.includes("verify your email")) && (
+                  <Link
+                    to={"/verify-email" + (email.trim() ? "?email=" + encodeURIComponent(email.trim()) : "")}
+                    className="inline-block mt-2 font-medium text-indigo-600 hover:text-indigo-500"
+                  >
+                    Go to verify email →
+                  </Link>
+                )}
+              </div>
+            )}
             <div>
               <button
                 type="submit"

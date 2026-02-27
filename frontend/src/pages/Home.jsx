@@ -1,38 +1,56 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import { API_BASE } from "../api";
 import "./Home.css";
-
-// 假数据（以后这里会换成后端 API）
-const mockProducts = [
-  {
-    id: 1,
-    name: "MacBook Pro 2020",
-    price: 480,
-    condition: "Like New",
-    category: "Electronics",
-    image: "https://placehold.co/400x400",
-  },
-  {
-    id: 2,
-    name: "Calculus Textbook",
-    price: 25,
-    condition: "Used",
-    category: "Books",
-    image: "https://placehold.co/400x400",
-  },
-  {
-    id: 3,
-    name: "Desk Lamp",
-    price: 10,
-    condition: "Good",
-    category: "Home",
-    image: "https://placehold.co/400x400",
-  },
-];
 
 function Home() {
   const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // 从后端拉取商品列表和分类
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch(`${API_BASE}/products`),
+          fetch(`${API_BASE}/products/categories`),
+        ]);
+        if (!cancelled && productsRes.ok) {
+          const list = await productsRes.json();
+          setProducts(list);
+        }
+        if (!cancelled && categoriesRes.ok) {
+          const { categories: cats } = await categoriesRes.json();
+          setApiCategories(Array.isArray(cats) ? cats : []);
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.message || "Failed to load products");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 将后端字段映射为前端展示格式（id, name, price, condition, category, image）
+  const normalizedProducts = useMemo(() => {
+    return products.map((p) => ({
+      id: p.id,
+      name: p.title,
+      price: p.price,
+      condition: p.condition || "good",
+      category: p.category,
+      image: p.images?.length
+        ? (p.images[0].startsWith("http") ? p.images[0] : `${API_BASE}${p.images[0]}`)
+        : "https://placehold.co/400x400",
+    }));
+  }, [products]);
 
   // Step 6: Search
   const [search, setSearch] = useState("");
@@ -43,11 +61,10 @@ function Home() {
   const [maxPrice, setMaxPrice] = useState("");
 
   const categories = useMemo(() => {
-    const set = new Set(mockProducts.map((p) => p.category));
-    return ["All", ...Array.from(set)];
-  }, []);
+    return ["All", ...apiCategories];
+  }, [apiCategories]);
 
-  const filteredProducts = mockProducts.filter((product) => {
+  const filteredProducts = normalizedProducts.filter((product) => {
     const matchSearch = product.name
       .toLowerCase()
       .includes(search.toLowerCase());
@@ -137,11 +154,13 @@ function Home() {
       </div>
 
       <div className="product-list">
-        {filteredProducts.map((product) => (
+        {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}
+        {error && <p style={{ marginTop: 20, color: "red" }}>{error}</p>}
+        {!loading && !error && filteredProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
 
-        {filteredProducts.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
           <p style={{ marginTop: 20 }}>No products found.</p>
         )}
       </div>

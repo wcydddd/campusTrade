@@ -1,42 +1,60 @@
 import { useParams, useNavigate } from "react-router-dom";
-
-const mockProducts = [
-  {
-    id: 1,
-    name: "MacBook Pro 2020",
-    price: 480,
-    condition: "Like New",
-    image: "https://placehold.co/600x400",
-  },
-  {
-    id: 2,
-    name: "Calculus Textbook",
-    price: 25,
-    condition: "Used",
-    image: "https://placehold.co/600x400",
-  },
-  {
-    id: 3,
-    name: "Desk Lamp",
-    price: 10,
-    condition: "Good",
-    image: "https://placehold.co/600x400",
-  },
-];
+import { useEffect, useState } from "react";
+import { API_BASE } from "../api";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const product = mockProducts.find((p) => String(p.id) === String(id));
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchProduct() {
+      try {
+        const res = await fetch(`${API_BASE}/products/${id}`);
+        if (cancelled) return;
+        if (!res.ok) {
+          if (res.status === 404) setProduct(null);
+          else setError("Failed to load product");
+          return;
+        }
+        const data = await res.json();
+        setProduct({
+          id: data.id,
+          name: data.title,
+          price: data.price,
+          condition: data.condition || "good",
+          description: data.description,
+          image: data.images?.length
+            ? (data.images[0].startsWith("http") ? data.images[0] : `${API_BASE}${data.images[0]}`)
+            : "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade",
+        });
+      } catch (e) {
+        if (!cancelled) setError(e.message || "Failed to load product");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    if (id) fetchProduct();
+    return () => { cancelled = true; };
+  }, [id]);
 
   const fallbackImg =
     "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade";
 
-  if (!product) {
+  if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
-        <h2>Product not found</h2>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+  if (error || !product) {
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        <h2>{error || "Product not found"}</h2>
         <button onClick={() => navigate("/")}>Back to Home</button>
       </div>
     );
@@ -84,6 +102,9 @@ export default function ProductDetail() {
         <p style={{ marginBottom: 20 }}>
           <strong>Condition:</strong> {product.condition}
         </p>
+        {product.description && (
+          <p style={{ marginBottom: 20, color: "#555" }}>{product.description}</p>
+        )}
 
         <button
           onClick={() => navigate(`/chat/${product.id}`)}

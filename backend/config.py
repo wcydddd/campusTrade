@@ -10,9 +10,7 @@ ENV_FILE = BASE_DIR / ".env"
 # 强制加载 .env 文件
 load_dotenv(ENV_FILE)
 
-print(f"📁 .env file path: {ENV_FILE}")
-print(f"📄 .env exists: {ENV_FILE.exists()}")
-print(f"🔑 JWT_SECRET from env: {os.getenv('JWT_SECRET', 'NOT FOUND')[:20]}...")
+print(f"[config] .env path: {ENV_FILE}, exists: {ENV_FILE.exists()}")
 
 class Settings(BaseSettings):
     # MongoDB
@@ -44,4 +42,4 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
-print(f"✅ Settings loaded successfully!")
+print("[config] Settings loaded successfully")

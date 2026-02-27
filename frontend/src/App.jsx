@@ -5,6 +5,7 @@ import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -14,15 +15,15 @@ function App() {
         {/* 默认进入 login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
+        {/* 公开页面 */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
-        {/* 主页 */}
-        <Route path="/home" element={<Home />} />
-
-        <Route path="/products/:id" element={<ProductDetail />} />
-        <Route path="/chat/:productId" element={<Chat />} />
+        {/* 需要登录才能访问的页面 */}
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+        <Route path="/chat/:productId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
         {/* 兜底 */}
         <Route path="*" element={<Navigate to="/login" replace />} />
