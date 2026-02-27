@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 10080
     
     # OpenAI
-    openai_api_key: str = ""
+    openai_api_key: str = ""  # ← 从 .env 读取
     
     # Email
     smtp_server: str = "smtp.gmail.com"
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     
     # App Settings
-    allowed_email_domains: str = "@university.edu,@student.ac.uk"
+    allowed_email_domains: str = "@liverpool.ac.uk,@university.edu,@student.ac.uk"
     upload_dir: str = "./uploads"
     max_upload_size_mb: int = 10
     
