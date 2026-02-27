@@ -1,0 +1,131 @@
+/* src/pages/Home.css */
+
+.home {
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: #f4f6f8;
+}
+
+.home-header {
+  max-width: 1100px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.home-subtitle {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.product-list {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* ===== Search Input ===== */
+
+.search-input {
+  margin-top: 14px;
+  padding: 10px 14px;
+  width: 340px;
+  max-width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #94a3b8;
+}
+
+/* ===== Filters Row ===== */
+
+.filters-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-control {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 14px;
+  outline: none;
+  min-width: 110px;
+}
+
+.filter-control:focus {
+  border-color: #94a3b8;
+}
+
+/* ===== Primary Buttons (Clear & Logout) ===== */
+
+.clear-btn,
+.logout-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.clear-btn:hover,
+.logout-btn:hover {
+  background: #1e293b;
+}
+
+.clear-btn:active,
+.logout-btn:active {
+  transform: scale(0.97);
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 900px) {
+  .product-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .product-list {
+    grid-template-columns: 1fr;
+  }
+
+  .home-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-control,
+  .clear-btn,
+  .logout-btn {
+    width: 100%;
+  }
+}
