@@ -54,7 +54,7 @@ function App() {
           path="/products/:id"
           element={
             <PrivateRoute>
-              <ProductDetail /
+              <ProductDetail />
             </PrivateRoute>
           }
         />
