@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { API_BASE } from "../api";
 import "./Home.css";
@@ -147,10 +147,12 @@ function Home() {
           </div>
         </div>
 
-        {/* ✅ Logout 按钮 */}
-        <button className="logout-btn" onClick={handleLogout}>
-          Log out
-        </button>
+        <div className="home-header-actions">
+          <Link to="/publish" className="publish-link">Publish product</Link>
+          <button className="logout-btn" onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
       </div>
 
       <div className="product-list">

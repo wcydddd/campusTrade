@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { API_BASE } from "../api";
 
 export default function Login() {
@@ -14,6 +14,8 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/home";
 
   // 动态校验逻辑（.ac.uk / .edu）
   const emailRegex = /^[^\s@]+@[^\s@]+\.(ac\.uk|edu)$/i;
@@ -55,7 +57,7 @@ export default function Login() {
       }
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/home");
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {

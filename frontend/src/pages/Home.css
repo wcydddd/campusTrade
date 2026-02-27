@@ -80,6 +80,29 @@
   border-color: #94a3b8;
 }
 
+/* ===== Header actions (Publish + Logout) ===== */
+
+.home-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.publish-link {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.publish-link:hover {
+  background: #4338ca;
+}
+
 /* ===== Primary Buttons (Clear & Logout) ===== */
 
 .clear-btn,
