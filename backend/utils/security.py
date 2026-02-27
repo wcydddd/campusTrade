@@ -9,12 +9,22 @@ from config import settings
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# bcrypt 对密码有 72 字节限制，超出会报错
+MAX_BCRYPT_BYTES = 72
+
 # JWT Bearer
 security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    """加密密码"""
+    """加密密码，超出 bcrypt 长度限制时返回 400 而不是 500"""
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > MAX_BCRYPT_BYTES:
+        # 提示用户密码太长，避免后端抛 ValueError
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is too long. Please use a shorter password (avoid very long or complex characters).",
+        )
     return pwd_context.hash(password)
 
 
