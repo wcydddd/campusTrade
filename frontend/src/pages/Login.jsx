@@ -45,7 +45,9 @@ export default function Login() {
     setTimeout(() => {
       console.log("Login successful with:", { email, password, rememberMe });
       setIsSubmitting(false);
-      navigate("/");
+
+      // ✅ 关键：登录成功去 /home（不要去 /）
+      navigate("/home");
     }, 800);
   };
 
