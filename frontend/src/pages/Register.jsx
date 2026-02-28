@@ -84,7 +84,7 @@ export default function Register() {
             }}
           />
           <input
-            placeholder="Username (min 2 chars)"
+            placeholder="Username (min 8 chars)"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={{

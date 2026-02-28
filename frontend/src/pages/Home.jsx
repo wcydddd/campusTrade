@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { API_BASE } from "../api";
@@ -84,6 +84,22 @@ function Home() {
     setMaxPrice("");
   }
 
+  // Me dropdown
+  const [meMenuOpen, setMeMenuOpen] = useState(false);
+  const meMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (meMenuRef.current && !meMenuRef.current.contains(e.target)) {
+        setMeMenuOpen(false);
+      }
+    }
+    if (meMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [meMenuOpen]);
+
   // Step 8: Logout
   function handleLogout() {
     localStorage.removeItem("token");
@@ -148,6 +164,21 @@ function Home() {
         </div>
 
         <div className="home-header-actions">
+          <div className="me-dropdown" ref={meMenuRef}>
+            <button
+              type="button"
+              className="me-link me-link-btn"
+              onClick={(e) => { e.stopPropagation(); setMeMenuOpen((v) => !v); }}
+            >
+              Me <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
+            </button>
+            {meMenuOpen && (
+              <ul className="me-dropdown-menu">
+                <li><Link to="/me" onClick={() => setMeMenuOpen(false)}>My profile</Link></li>
+                <li><Link to="/my-products" onClick={() => setMeMenuOpen(false)}>Manage my products</Link></li>
+              </ul>
+            )}
+          </div>
           <Link to="/publish" className="publish-link">Publish product</Link>
           <button className="logout-btn" onClick={handleLogout}>
             Log out

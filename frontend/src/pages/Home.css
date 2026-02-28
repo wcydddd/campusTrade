@@ -88,6 +88,68 @@
   gap: 10px;
 }
 
+.me-dropdown {
+  position: relative;
+}
+
+.me-link.me-link-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.me-link.me-link-btn:hover {
+  background: #1e293b;
+}
+
+.me-link.me-link-btn .me-arrow {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.9;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.me-link.me-link-btn .me-arrow-open {
+  transform: rotate(180deg);
+}
+
+.me-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: 6px 0 0;
+  padding: 6px 0;
+  min-width: 180px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  list-style: none;
+  z-index: 100;
+}
+
+.me-dropdown-menu li {
+  margin: 0;
+}
+
+.me-dropdown-menu a {
+  display: block;
+  padding: 10px 14px;
+  color: #1a1a1a;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.me-dropdown-menu a:hover {
+  background: #f1f5f9;
+}
+
 .publish-link {
   padding: 10px 16px;
   border-radius: 12px;
