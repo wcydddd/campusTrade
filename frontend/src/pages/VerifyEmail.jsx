@@ -37,6 +37,10 @@ export default function VerifyEmail() {
         body: JSON.stringify({ email: trimmed }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        const minutes = data.retry_after ? Math.ceil(Number(data.retry_after) / 60) : 5;
+        throw new Error(`Too many attempts. Please try again in ${minutes} minute(s).`);
+      }
       if (!res.ok) {
         throw new Error(data.detail || data.message || "Failed to send code");
       }
@@ -69,6 +73,10 @@ export default function VerifyEmail() {
         body: JSON.stringify({ email: trimmed, code: code.trim() }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        const minutes = data.retry_after ? Math.ceil(Number(data.retry_after) / 60) : 5;
+        throw new Error(`Too many attempts. Please try again in ${minutes} minute(s).`);
+      }
       if (!res.ok) {
         throw new Error(data.detail || data.message || "Verification failed");
       }

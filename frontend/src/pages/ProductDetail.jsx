@@ -2,6 +2,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { API_BASE } from "../api";
 
+const CATEGORY_DISPLAY = {
+  "教材": "Textbooks",
+  "电子产品": "Electronics",
+  "家具": "Furniture",
+  "服饰": "Clothing",
+  "运动器材": "Sports",
+  "其他": "Other",
+  Kitchen: "Other",
+  Stationery: "Other",
+};
+
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -26,6 +37,7 @@ export default function ProductDetail() {
           name: data.title,
           price: data.price,
           condition: data.condition || "good",
+          category: data.category,
           description: data.description,
           image: data.images?.length
             ? (data.images[0].startsWith("http") ? data.images[0] : `${API_BASE}${data.images[0]}`)
@@ -102,6 +114,11 @@ export default function ProductDetail() {
         <p style={{ marginBottom: 20 }}>
           <strong>Condition:</strong> {product.condition}
         </p>
+        {product.category && (
+          <p style={{ marginBottom: 20 }}>
+            <strong>Category:</strong> {CATEGORY_DISPLAY[product.category] ?? product.category}
+          </p>
+        )}
         {product.description && (
           <p style={{ marginBottom: 20, color: "#555" }}>{product.description}</p>
         )}

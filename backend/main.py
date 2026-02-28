@@ -6,6 +6,7 @@ import os
 
 from utils.database import connect_to_mongo, close_mongo_connection, get_database
 from routes.auth import router as auth_router
+from routes.admin import router as admin_router
 from routes.ai import router as ai_router
 from routes.products import router as products_router
 from routes.messages import router as messages_router
@@ -40,6 +41,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(products_router)
 app.include_router(ai_router)
 app.include_router(messages_router)

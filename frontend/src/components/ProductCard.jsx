@@ -2,10 +2,20 @@
 import "./ProductCard.css";
 import { useNavigate } from "react-router-dom";
 
+const CATEGORY_DISPLAY = {
+  "教材": "Textbooks",
+  "电子产品": "Electronics",
+  "家具": "Furniture",
+  "服饰": "Clothing",
+  "运动器材": "Sports",
+  "其他": "Other",
+  Kitchen: "Other",
+  Stationery: "Other",
+};
+
 function ProductCard({ product }) {
   const navigate = useNavigate();
-
-  // 兜底图（避免任何图片域名解析失败）
+  const categoryLabel = product.category ? (CATEGORY_DISPLAY[product.category] ?? product.category) : "";
   const fallbackImg = "https://dummyimage.com/400x400/cccccc/000000&text=CampusTrade";
 
   return (
@@ -25,6 +35,9 @@ function ProductCard({ product }) {
           <p className="price">£{product.price}</p>
           <span className="badge">{product.condition}</span>
         </div>
+        {categoryLabel && (
+          <p className="product-card-category">{categoryLabel}</p>
+        )}
 
         <div className="product-card-actions">
           <button onClick={() => navigate(`/products/${product.id}`)}>

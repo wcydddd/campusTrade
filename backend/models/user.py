@@ -11,7 +11,7 @@ class UserRole(str,Enum):
 # 用户注册请求
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8)
     username: str = Field(..., min_length=2, max_length=30)
 
 # 用户登录请求
@@ -38,7 +38,18 @@ class UserResponse(BaseModel):
     role: UserRole
     is_verified: bool
     avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     created_at: datetime
+
+
+class ProfileUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=2, max_length=30)
+    bio: Optional[str] = Field(None, max_length=500)
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=8)
 
 
 # Token 响应

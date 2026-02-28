@@ -3,6 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import "./MyProducts.css";
 
+// Backend returns category in Chinese; show English to user
+const CATEGORY_DISPLAY = {
+  "教材": "Textbooks",
+  "电子产品": "Electronics",
+  "家具": "Furniture",
+  "服饰": "Clothing",
+  "运动器材": "Sports",
+  "其他": "Other",
+  "Kitchen": "Other",
+  "Stationery": "Other",
+};
+
 function MyProducts() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -79,7 +91,7 @@ function MyProducts() {
               <div className="my-products-card-body">
                 <h3>{p.title}</h3>
                 <p className="my-products-card-price">£{p.price}</p>
-                <p className="my-products-card-meta">{p.category} · {p.condition}</p>
+                <p className="my-products-card-meta">{CATEGORY_DISPLAY[p.category] ?? p.category} · {p.condition}</p>
                 <div className="my-products-card-actions">
                   <Link to={`/my-products/${p.id}/edit`} className="my-products-btn my-products-btn-edit">
                     Edit

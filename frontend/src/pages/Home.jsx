@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import { API_BASE } from "../api";
+import { API_BASE, authFetch } from "../api";
 import "./Home.css";
 
 function Home() {
@@ -10,6 +10,31 @@ function Home() {
   const [apiCategories, setApiCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Sync current user from API so role (admin) is always up-to-date
+  useEffect(() => {
+    let cancelled = false;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch (_) {}
+    authFetch(`${API_BASE}/auth/me`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!cancelled && data) {
+          setCurrentUser(data);
+          localStorage.setItem("user", JSON.stringify(data));
+        }
+      })
+      .catch(() => { if (!cancelled) setCurrentUser(null); });
+    return () => { cancelled = true; };
+  }, []);
 
   // 从后端拉取商品列表和分类
   useEffect(() => {
@@ -176,6 +201,9 @@ function Home() {
               <ul className="me-dropdown-menu">
                 <li><Link to="/me" onClick={() => setMeMenuOpen(false)}>My profile</Link></li>
                 <li><Link to="/my-products" onClick={() => setMeMenuOpen(false)}>Manage my products</Link></li>
+                {currentUser?.role === "admin" && (
+                  <li><Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>User management</Link></li>
+                )}
               </ul>
             )}
           </div>

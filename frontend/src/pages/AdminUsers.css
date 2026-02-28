@@ -1,0 +1,157 @@
+.admin-users {
+  min-height: 100vh;
+  padding: 24px;
+  background: #f4f6f8;
+}
+
+.admin-users-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.admin-users-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a1a1a;
+}
+
+.admin-users-back {
+  color: #4f46e5;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.admin-users-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-users-toolbar input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 220px;
+  font-size: 14px;
+}
+
+.admin-users-toolbar button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #4f46e5;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-users-error {
+  color: #c00;
+  margin-bottom: 10px;
+}
+
+.admin-users-meta {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.admin-users-table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-users-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+}
+
+.admin-users-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-users-actions button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border: none;
+}
+
+.admin-users-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-verify {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.btn-unverify {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-ban {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.btn-unban {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.admin-users-actions select {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.admin-users-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-users-pagination button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-users-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-users-msg {
+  color: #666;
+  margin: 10px 0;
+}
