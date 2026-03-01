@@ -18,29 +18,86 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* 默认进入 login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* 默认进入商品列表（公开） */}
+        <Route path="/" element={<Navigate to="/home" replace />} />
 
         {/* 公开页面 */}
+        <Route path="/home" element={<Home />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+
+        {/* 公开的认证相关页面 */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
-        {/* 需要登录才能访问的页面 */}
-        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/publish" element={<ProtectedRoute><PublishProduct /></ProtectedRoute>} />
-        <Route path="/me" element={<ProtectedRoute><MeProfile /></ProtectedRoute>} />
-        <Route path="/me/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute><AdminRoute><AdminUsers /></AdminRoute></ProtectedRoute>} />
-        <Route path="/my-products" element={<ProtectedRoute><MyProducts /></ProtectedRoute>} />
-        <Route path="/my-products/:id/edit" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-        <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
-        <Route path="/chat/:productId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        {/* 需要登录 + 必须已验证邮箱 */}
+        <Route
+          path="/publish"
+          element={
+            <ProtectedRoute requireVerified>
+              <PublishProduct />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 需要登录（不强制 verified） */}
+        <Route
+          path="/chat/:productId"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 需要登录 */}
+        <Route
+          path="/me"
+          element={
+            <ProtectedRoute>
+              <MeProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/me/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-products"
+          element={
+            <ProtectedRoute>
+              <MyProducts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-products/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditProduct />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 管理员 */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
 
         {/* 兜底 */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </BrowserRouter>
   );

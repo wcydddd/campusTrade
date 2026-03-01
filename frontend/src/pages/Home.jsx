@@ -4,66 +4,129 @@ import ProductCard from "../components/ProductCard";
 import { API_BASE, authFetch } from "../api";
 import "./Home.css";
 
+function buildQuery(params) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === "") return;
+    sp.append(k, String(v));
+  });
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
 function Home() {
   const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [apiCategories, setApiCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Sync current user from API so role (admin) is always up-to-date
+  // 同步当前用户信息
   useEffect(() => {
     let cancelled = false;
     const token = localStorage.getItem("token");
+
     if (!token) {
       setCurrentUser(null);
       return;
     }
+
     try {
       const stored = localStorage.getItem("user");
       if (stored) setCurrentUser(JSON.parse(stored));
     } catch (_) {}
+
     authFetch(`${API_BASE}/auth/me`)
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) {
           setCurrentUser(data);
           localStorage.setItem("user", JSON.stringify(data));
         }
       })
-      .catch(() => { if (!cancelled) setCurrentUser(null); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setCurrentUser(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // 从后端拉取商品列表和分类
+  // 筛选状态
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sustainable, setSustainable] = useState(false);
+
+  // 获取分类
   useEffect(() => {
     let cancelled = false;
-    async function fetchData() {
+
+    async function fetchCategories() {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          fetch(`${API_BASE}/products`),
-          fetch(`${API_BASE}/products/categories`),
-        ]);
-        if (!cancelled && productsRes.ok) {
-          const list = await productsRes.json();
-          setProducts(list);
-        }
-        if (!cancelled && categoriesRes.ok) {
-          const { categories: cats } = await categoriesRes.json();
+        const res = await fetch(`${API_BASE}/products/categories`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const cats = data?.categories;
+        if (!cancelled) {
           setApiCategories(Array.isArray(cats) ? cats : []);
         }
-      } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load products");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      } catch {}
     }
-    fetchData();
-    return () => { cancelled = true; };
+
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // 将后端字段映射为前端展示格式（id, name, price, condition, category, image）
+  // 获取商品
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchProducts() {
+      setLoading(true);
+      setError("");
+
+      const query = buildQuery({
+        sustainable: sustainable ? true : "",
+        category: category === "All" ? "" : category,
+        min_price: minPrice,
+        max_price: maxPrice,
+        search: search.trim(),
+      });
+
+      try {
+        const res = await fetch(`${API_BASE}/products${query}`);
+        if (!res.ok)
+          throw new Error(`Failed to load products (HTTP ${res.status})`);
+        const list = await res.json();
+        if (!cancelled) {
+          setProducts(Array.isArray(list) ? list : []);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e.message || "Failed to load products");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    const t = setTimeout(fetchProducts, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [search, category, minPrice, maxPrice, sustainable]);
+
   const normalizedProducts = useMemo(() => {
     return products.map((p) => ({
       id: p.id,
@@ -72,41 +135,24 @@ function Home() {
       condition: p.condition || "good",
       category: p.category,
       image: p.images?.length
-        ? (p.images[0].startsWith("http") ? p.images[0] : `${API_BASE}${p.images[0]}`)
+        ? p.images[0].startsWith("http")
+          ? p.images[0]
+          : `${API_BASE}${p.images[0]}`
         : "https://placehold.co/400x400",
     }));
   }, [products]);
 
-  // Step 6: Search
-  const [search, setSearch] = useState("");
-
-  // Step 7: Category + Price filters
-  const [category, setCategory] = useState("All");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-
-  const categories = useMemo(() => {
-    return ["All", ...apiCategories];
-  }, [apiCategories]);
-
-  const filteredProducts = normalizedProducts.filter((product) => {
-    const matchSearch = product.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchCategory = category === "All" || product.category === category;
-
-    const minOk = minPrice === "" || product.price >= Number(minPrice);
-    const maxOk = maxPrice === "" || product.price <= Number(maxPrice);
-
-    return matchSearch && matchCategory && minOk && maxOk;
-  });
+  const categories = useMemo(
+    () => ["All", ...apiCategories],
+    [apiCategories]
+  );
 
   function clearFilters() {
     setSearch("");
     setCategory("All");
     setMinPrice("");
     setMaxPrice("");
+    setSustainable(false);
   }
 
   // Me dropdown
@@ -119,13 +165,14 @@ function Home() {
         setMeMenuOpen(false);
       }
     }
+
     if (meMenuOpen) {
       document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
+      return () =>
+        document.removeEventListener("click", handleClickOutside);
     }
   }, [meMenuOpen]);
 
-  // Step 8: Logout
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -141,7 +188,6 @@ function Home() {
             Buy / sell / exchange items within your campus.
           </p>
 
-          {/* Search */}
           <input
             className="search-input"
             type="text"
@@ -150,7 +196,6 @@ function Home() {
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          {/* Filters */}
           <div className="filters-row">
             <select
               className="filter-control"
@@ -182,48 +227,143 @@ function Home() {
               onChange={(e) => setMaxPrice(e.target.value)}
             />
 
-            <button className="clear-btn" onClick={clearFilters}>
+            <label
+              className="filter-control"
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={sustainable}
+                onChange={(e) =>
+                  setSustainable(e.target.checked)
+                }
+              />
+              Sustainable
+            </label>
+
+            <button
+              className="clear-btn"
+              onClick={clearFilters}
+            >
               Clear
             </button>
           </div>
         </div>
 
         <div className="home-header-actions">
-          <div className="me-dropdown" ref={meMenuRef}>
+          <div
+            className="me-dropdown"
+            ref={meMenuRef}
+          >
             <button
               type="button"
               className="me-link me-link-btn"
-              onClick={(e) => { e.stopPropagation(); setMeMenuOpen((v) => !v); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMeMenuOpen((v) => !v);
+              }}
             >
-              Me <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
+              Me{" "}
+              <span
+                className={`me-arrow ${
+                  meMenuOpen ? "me-arrow-open" : ""
+                }`}
+              >
+                ▼
+              </span>
             </button>
+
             {meMenuOpen && (
               <ul className="me-dropdown-menu">
-                <li><Link to="/me" onClick={() => setMeMenuOpen(false)}>My profile</Link></li>
-                <li><Link to="/my-products" onClick={() => setMeMenuOpen(false)}>Manage my products</Link></li>
+                <li>
+                  <Link
+                    to="/me"
+                    onClick={() =>
+                      setMeMenuOpen(false)
+                    }
+                  >
+                    My profile
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/my-products"
+                    onClick={() =>
+                      setMeMenuOpen(false)
+                    }
+                  >
+                    Manage my products
+                  </Link>
+                </li>
                 {currentUser?.role === "admin" && (
-                  <li><Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>User management</Link></li>
+                  <li>
+                    <Link
+                      to="/admin/users"
+                      onClick={() =>
+                        setMeMenuOpen(false)
+                      }
+                    >
+                      User management
+                    </Link>
+                  </li>
                 )}
               </ul>
             )}
           </div>
-          <Link to="/publish" className="publish-link">Publish product</Link>
-          <button className="logout-btn" onClick={handleLogout}>
+
+          <Link
+            to="/publish"
+            className="publish-link"
+          >
+            Publish product
+          </Link>
+
+          <button
+            className="logout-btn"
+            onClick={handleLogout}
+          >
             Log out
           </button>
         </div>
       </div>
 
       <div className="product-list">
-        {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}
-        {error && <p style={{ marginTop: 20, color: "red" }}>{error}</p>}
-        {!loading && !error && filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-
-        {!loading && !error && filteredProducts.length === 0 && (
-          <p style={{ marginTop: 20 }}>No products found.</p>
+        {loading && (
+          <p style={{ marginTop: 20 }}>
+            Loading products...
+          </p>
         )}
+        {error && (
+          <p
+            style={{
+              marginTop: 20,
+              color: "red",
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        {!loading &&
+          !error &&
+          normalizedProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+            />
+          ))}
+
+        {!loading &&
+          !error &&
+          normalizedProducts.length === 0 && (
+            <p style={{ marginTop: 20 }}>
+              No products found.
+            </p>
+          )}
       </div>
     </div>
   );

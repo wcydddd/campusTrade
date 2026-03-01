@@ -54,8 +54,10 @@ export default function PublishProduct() {
       }
     }
     load();
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -68,11 +70,13 @@ export default function PublishProduct() {
 
     if (!trimTitle) return setError("Please enter a title.");
     if (!trimDesc) return setError("Please enter a description.");
-    if (Number.isNaN(numPrice) || numPrice < 0) return setError("Please enter a valid price.");
+    if (Number.isNaN(numPrice) || numPrice < 0)
+      return setError("Please enter a valid price.");
     if (!category) return setError("Please select a category.");
 
     setLoading(true);
     try {
+      // ===== 分支 1：带图片，用 /products/with-image（直接 fetch，手动加 token）=====
       if (imageFile) {
         const formData = new FormData();
         formData.append("file", imageFile);
@@ -92,13 +96,18 @@ export default function PublishProduct() {
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail || data.message || "Publish failed.");
+
         setSuccess("Product published.");
         setTimeout(() => navigate("/home"), 1500);
         return;
       }
 
+      // ===== 分支 2：不带图片，用 authFetch("/products")（关键修复在这里）=====
       const categoryForApi = CATEGORY_TO_ENUM[category] ?? "其他";
-      const res = await authFetch(`${API_BASE}/products`, {
+
+      // authFetch 会自动拼 API_BASE，所以这里只写相对路径
+      // authFetch 会在非 2xx 时抛错，所以不用再 res.ok/res.json
+      await authFetch("/products", {
         method: "POST",
         body: JSON.stringify({
           title: trimTitle,
@@ -111,8 +120,6 @@ export default function PublishProduct() {
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || data.message || "Publish failed.");
       setSuccess("Product published.");
       setTimeout(() => navigate("/home"), 1500);
     } catch (err) {
@@ -126,7 +133,9 @@ export default function PublishProduct() {
     <div className="publish-product">
       <div className="publish-product-card">
         <h2>Publish product</h2>
-        <p className="publish-product-hint">Fill in the details and optionally upload an image.</p>
+        <p className="publish-product-hint">
+          Fill in the details and optionally upload an image.
+        </p>
 
         <form onSubmit={handleSubmit}>
           <label>Title *</label>
@@ -160,14 +169,18 @@ export default function PublishProduct() {
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
             {categories.length === 0 && <option value="">Loading...</option>}
             {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </select>
 
           <label>Condition</label>
           <select value={condition} onChange={(e) => setCondition(e.target.value)}>
             {CONDITION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
 
