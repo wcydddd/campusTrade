@@ -1,11 +1,13 @@
+import json
+
 import openai
 import base64
 from config import settings
 
-# 设置 OpenAI API Key
-client = openai.OpenAI(api_key=settings.openai_api_key)
+# Use async client to avoid sync connection errors in FastAPI async event loop
+client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
-# 商品分类列表
+# Product category list
 CATEGORIES = [
     "Electronics",
     "Textbooks", 
@@ -19,14 +21,14 @@ CATEGORIES = [
 
 async def analyze_image(image_data: bytes) -> dict:
     """
-    使用 GPT-4 Vision 分析商品图片
-    返回: {"title": "...", "description": "...", "category": "...", "keywords": [...]}
+    Analyze product image using GPT-4 Vision
+    Returns: {"title": "...", "description": "...", "category": "...", "keywords": [...]}
     """
     
-    # 将图片转为 base64
+    # Convert image to base64
     base64_image = base64.b64encode(image_data).decode("utf-8")
     
-    # 构建 prompt
+    # Build prompt
     prompt = f"""Analyze this product image for a campus second-hand marketplace.
 
 Please provide:
@@ -46,7 +48,7 @@ Respond in this exact JSON format:
 Only respond with the JSON, no other text."""
 
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -65,20 +67,19 @@ Only respond with the JSON, no other text."""
             max_tokens=500
         )
         
-        # 解析返回的 JSON
+        # Parse returned JSON
         result_text = response.choices[0].message.content.strip()
         
-        # 清理可能的 markdown 格式
+        # Strip possible markdown formatting
         if result_text.startswith("```"):
             result_text = result_text.split("```")[1]
             if result_text.startswith("json"):
                 result_text = result_text[4:]
         result_text = result_text.strip()
         
-        import json
         result = json.loads(result_text)
         
-        # 验证 category 是否在列表中
+        # Verify category is in the list
         if result.get("category") not in CATEGORIES:
             result["category"] = "Other"
         
@@ -100,5 +101,5 @@ Only respond with the JSON, no other text."""
 
 
 def get_categories() -> list:
-    """返回所有可用的商品分类"""
+    """Return all available product categories"""
     return CATEGORIES

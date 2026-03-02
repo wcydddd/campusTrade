@@ -14,7 +14,6 @@ from config import settings
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
-# 上传目录配置
 UPLOAD_DIR = Path(settings.upload_dir)
 UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -22,11 +21,11 @@ MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024
 
 
 # =====================================================
-# 公共函数
+# Utility functions
 # =====================================================
 
 def _to_response(doc: dict) -> ProductResponse:
-    """将 MongoDB 文档转换为响应模型"""
+    """Convert a MongoDB document to a response model."""
     return ProductResponse(
         id=str(doc["_id"]),
         seller_id=str(doc["seller_id"]),
@@ -45,7 +44,7 @@ def _to_response(doc: dict) -> ProductResponse:
 
 
 async def get_verified_user(current_user: dict, db):
-    """获取当前用户，并确保已验证"""
+    """Get the current user and ensure they are verified."""
     try:
         uid = ObjectId(current_user["user_id"])
     except Exception:
@@ -61,11 +60,7 @@ async def get_verified_user(current_user: dict, db):
 
 
 async def save_upload_file(file: UploadFile) -> tuple[str, bytes]:
-    """
-    保存上传的文件
-    返回: (image_url, file_content)
-    """
-    # 检查文件格式
+    """Save an uploaded file and return (image_url, file_content)."""
     file_ext = file.filename.split(".")[-1].lower() if file.filename else ""
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -73,21 +68,17 @@ async def save_upload_file(file: UploadFile) -> tuple[str, bytes]:
             detail=f"Invalid file format. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # 读取文件内容
     content = await file.read()
     
-    # 检查文件大小
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
             detail=f"File too large. Maximum size: {settings.max_upload_size_mb}MB"
         )
     
-    # 生成唯一文件名
     filename = f"{uuid.uuid4()}.{file_ext}"
     filepath = UPLOAD_DIR / filename
     
-    # 保存文件
     with open(filepath, "wb") as f:
         f.write(content)
     
@@ -95,7 +86,7 @@ async def save_upload_file(file: UploadFile) -> tuple[str, bytes]:
 
 
 # =====================================================
-# GET /products - 商品列表（所有人可访问）
+# GET /products - List products (public)
 # =====================================================
 
 @router.get("", response_model=List[ProductResponse])
@@ -106,11 +97,7 @@ async def list_products(
     max_price: Optional[float] = Query(default=None, description="Maximum price"),
     search: Optional[str] = Query(default=None, description="Search in title/description"),
 ):
-    """
-    获取商品列表
-    - 所有人可访问（无需登录）
-    - 支持筛选：sustainable, category, price range, search
-    """
+    """List products with optional filters. Public access."""
     db = get_database()
 
     query = {}
@@ -141,22 +128,22 @@ async def list_products(
 
 
 # =====================================================
-# GET /products/categories - 获取所有分类
+# GET /products/categories - List all categories
 # =====================================================
 
 @router.get("/categories")
 async def list_product_categories():
-    """获取所有可用的商品分类"""
+    """Get all available product categories."""
     return {"categories": get_categories()}
 
 
 # =====================================================
-# GET /products/user/me - 获取当前用户的商品（需登录）
+# GET /products/user/me - Current user's products (auth required)
 # =====================================================
 
 @router.get("/user/me", response_model=List[ProductResponse])
 async def get_my_products(current_user: dict = Depends(get_current_user)):
-    """获取当前用户发布的所有商品"""
+    """Get all products published by the current user."""
     db = get_database()
 
     try:
@@ -169,12 +156,12 @@ async def get_my_products(current_user: dict = Depends(get_current_user)):
 
 
 # =====================================================
-# GET /products/{id} - 商品详情（所有人可访问）
+# GET /products/{id} - Product detail (public)
 # =====================================================
 
 @router.get("/{id}", response_model=ProductResponse)
 async def get_product(id: str):
-    """获取商品详情，每次访问浏览量 +1"""
+    """Get product detail and increment view count."""
     db = get_database()
 
     try:
@@ -193,7 +180,7 @@ async def get_product(id: str):
 
 
 # =====================================================
-# POST /products - 创建商品（手动填写，仅验证用户）
+# POST /products - Create product (JSON, auth required)
 # =====================================================
 
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
@@ -201,10 +188,7 @@ async def create_product(
     payload: ProductCreate, 
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    创建商品（手动填写信息）
-    - 仅已验证用户可创建
-    """
+    """Create a product with manually entered information. Verified users only."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
@@ -222,29 +206,24 @@ async def create_product(
 
 
 # =====================================================
-# POST /products/with-image - 上传图片创建商品（手动填写 + 图片）
+# POST /products/with-image - Create product with image upload
 # =====================================================
 
 @router.post("/with-image", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_with_image(
-    file: UploadFile = File(..., description="商品图片"),
-    title: str = Form(..., description="商品标题"),
-    description: str = Form(..., description="商品描述"),
-    price: float = Form(..., description="价格"),
-    category: str = Form(..., description="分类"),
-    condition: str = Form(default="good", description="商品状态: new/like_new/good/fair"),
-    sustainable: bool = Form(default=False, description="是否环保商品"),
+    file: UploadFile = File(..., description="Product image"),
+    title: str = Form(..., description="Product title"),
+    description: str = Form(..., description="Product description"),
+    price: float = Form(..., description="Price"),
+    category: str = Form(..., description="Category"),
+    condition: str = Form(default="good", description="Condition: new/like_new/good/fair"),
+    sustainable: bool = Form(default=False, description="Whether the product is sustainable"),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    上传图片并创建商品（手动填写信息）
-    - 仅已验证用户可创建
-    - 图片会保存到服务器
-    """
+    """Create a product with an uploaded image. Verified users only."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    # 保存图片
     image_url, _ = await save_upload_file(file)
 
     now = datetime.utcnow()
@@ -269,34 +248,26 @@ async def create_product_with_image(
 
 
 # =====================================================
-# POST /products/ai-create - AI 自动生成商品信息（核心功能！）
+# POST /products/ai-create - AI-powered product creation
 # =====================================================
 
 @router.post("/ai-create", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_with_ai(
-    file: UploadFile = File(..., description="商品图片"),
-    price: float = Form(..., description="价格（需要用户填写）"),
-    condition: str = Form(default="good", description="商品状态: new/like_new/good/fair"),
-    sustainable: bool = Form(default=False, description="是否环保商品"),
+    file: UploadFile = File(..., description="Product image"),
+    price: float = Form(..., description="Price (user must provide)"),
+    condition: str = Form(default="good", description="Condition: new/like_new/good/fair"),
+    sustainable: bool = Form(default=False, description="Whether the product is sustainable"),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    🤖 AI 智能发布商品
-    - 上传图片，AI 自动生成标题、描述、分类
-    - 用户只需填写价格和状态
-    - 仅已验证用户可使用
-    """
+    """AI-powered product creation: upload an image, AI generates title/description/category."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    # 1. 保存图片
     image_url, file_content = await save_upload_file(file)
 
-    # 2. 调用 AI 分析图片
     ai_result = await analyze_image(file_content)
     
     if not ai_result["success"]:
-        # AI 失败，删除已保存的图片
         try:
             os.remove(UPLOAD_DIR / image_url.split("/")[-1])
         except:
@@ -308,7 +279,6 @@ async def create_product_with_ai(
 
     ai_data = ai_result["data"]
 
-    # 3. 创建商品
     now = datetime.utcnow()
     doc = {
         "seller_id": uid,
@@ -322,7 +292,7 @@ async def create_product_with_ai(
         "keywords": ai_data.get("keywords", []),
         "status": "available",
         "views": 0,
-        "ai_generated": True,  # 标记为 AI 生成
+        "ai_generated": True,
         "created_at": now,
         "updated_at": now,
     }
@@ -333,24 +303,18 @@ async def create_product_with_ai(
 
 
 # =====================================================
-# POST /products/ai-preview - AI 预览（不保存，先看效果）
+# POST /products/ai-preview - AI preview (no save)
 # =====================================================
 
 @router.post("/ai-preview")
 async def preview_ai_analysis(
-    file: UploadFile = File(..., description="商品图片"),
+    file: UploadFile = File(..., description="Product image"),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    🔍 AI 预览分析结果
-    - 上传图片，查看 AI 生成的标题、描述、分类
-    - 不保存图片，不创建商品
-    - 用于用户确认后再正式发布
-    """
+    """AI preview: analyze image and return AI-generated fields without saving."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    # 检查文件格式
     file_ext = file.filename.split(".")[-1].lower() if file.filename else ""
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -358,7 +322,6 @@ async def preview_ai_analysis(
             detail=f"Invalid file format. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # 读取文件内容（不保存）
     content = await file.read()
     
     if len(content) > MAX_FILE_SIZE:
@@ -367,7 +330,6 @@ async def preview_ai_analysis(
             detail=f"File too large. Maximum size: {settings.max_upload_size_mb}MB"
         )
 
-    # 调用 AI 分析
     ai_result = await analyze_image(content)
     
     if not ai_result["success"]:
@@ -384,7 +346,7 @@ async def preview_ai_analysis(
 
 
 # =====================================================
-# PUT /products/{id} - 更新商品（仅验证用户 + Owner）
+# PUT /products/{id} - Update product (owner only)
 # =====================================================
 
 @router.put("/{id}", response_model=ProductResponse)
@@ -393,7 +355,7 @@ async def update_product(
     payload: ProductCreate, 
     current_user: dict = Depends(get_current_user)
 ):
-    """更新商品，只有商品所有者可以修改"""
+    """Update a product. Only the owner can modify it."""
     db = get_database()
 
     try:
@@ -421,7 +383,7 @@ async def update_product(
 
 
 # =====================================================
-# DELETE /products/{id} - 删除商品（仅验证用户 + Owner）
+# DELETE /products/{id} - Delete product (owner only)
 # =====================================================
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
@@ -429,7 +391,7 @@ async def delete_product(
     id: str, 
     current_user: dict = Depends(get_current_user)
 ):
-    """删除商品，只有商品所有者可以删除"""
+    """Delete a product. Only the owner can delete it."""
     db = get_database()
 
     try:
@@ -446,13 +408,12 @@ async def delete_product(
     if str(existing["seller_id"]) != str(uid):
         raise HTTPException(status_code=403, detail="You can only delete your own products")
 
-    # 删除关联的图片文件
     for image_url in existing.get("images", []):
         try:
             filename = image_url.split("/")[-1]
             os.remove(UPLOAD_DIR / filename)
         except:
-            pass  # 图片不存在也没关系
+            pass
 
     await db.products.delete_one({"_id": pid})
     return {"ok": True, "message": "Product deleted successfully"}
