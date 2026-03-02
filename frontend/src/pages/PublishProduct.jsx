@@ -102,12 +102,9 @@ export default function PublishProduct() {
         return;
       }
 
-      // ===== 分支 2：不带图片，用 authFetch("/products")（关键修复在这里）=====
       const categoryForApi = CATEGORY_TO_ENUM[category] ?? "其他";
 
-      // authFetch 会自动拼 API_BASE，所以这里只写相对路径
-      // authFetch 会在非 2xx 时抛错，所以不用再 res.ok/res.json
-      await authFetch("/products", {
+      const res = await authFetch(`${API_BASE}/products`, {
         method: "POST",
         body: JSON.stringify({
           title: trimTitle,
@@ -119,6 +116,9 @@ export default function PublishProduct() {
           images: [],
         }),
       });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || "Publish failed.");
 
       setSuccess("Product published.");
       setTimeout(() => navigate("/home"), 1500);
