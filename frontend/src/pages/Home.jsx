@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import { API_BASE, authFetch } from "../api";
+import { API_BASE, logout } from "../api";
+import { useAuth } from "../context/AuthContext";
 import "./Home.css";
 
 function buildQuery(params) {
@@ -21,39 +22,7 @@ function Home() {
   const [apiCategories, setApiCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // 同步当前用户信息
-  useEffect(() => {
-    let cancelled = false;
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setCurrentUser(null);
-      return;
-    }
-
-    try {
-      const stored = localStorage.getItem("user");
-      if (stored) setCurrentUser(JSON.parse(stored));
-    } catch (_) {}
-
-    authFetch(`${API_BASE}/auth/me`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data) {
-          setCurrentUser(data);
-          localStorage.setItem("user", JSON.stringify(data));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setCurrentUser(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user: currentUser } = useAuth();
 
   // 筛选状态
   const [search, setSearch] = useState("");
@@ -174,8 +143,7 @@ function Home() {
   }, [meMenuOpen]);
 
   function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    logout();
     navigate("/login");
   }
 
