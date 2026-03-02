@@ -15,6 +15,15 @@ function buildQuery(params) {
   return qs ? `?${qs}` : "";
 }
 
+// ✅ C1：统一把后端返回的相对路径补成可访问的 URL
+function resolveMediaUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  // 已经是绝对地址 / data URL
+  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  // 相对地址（可能是 /uploads/xxx 或 uploads/xxx）
+  return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
+}
+
 function Home() {
   const navigate = useNavigate();
 
@@ -96,25 +105,43 @@ function Home() {
     };
   }, [search, category, minPrice, maxPrice, sustainable]);
 
+  // ✅ C1：列表页要“优先 thumb_url”，并保留 image_url 给详情页用
   const normalizedProducts = useMemo(() => {
-    return products.map((p) => ({
-      id: p.id,
-      name: p.title,
-      price: p.price,
-      condition: p.condition || "good",
-      category: p.category,
-      image: p.images?.length
-        ? p.images[0].startsWith("http")
-          ? p.images[0]
-          : `${API_BASE}${p.images[0]}`
-        : "https://placehold.co/400x400",
-    }));
+    const placeholder = "https://placehold.co/400x400";
+
+    return products.map((p) => {
+      // 兼容不同字段命名（后端可能叫 thumb_url / image_url / images）
+      const thumbRaw =
+        p.thumb_url ||
+        p.thumbnail_url ||
+        p.thumbUrl ||
+        p.thumbnailUrl ||
+        "";
+
+      const fullRaw =
+        p.image_url ||
+        p.imageUrl ||
+        (p.images?.length ? p.images[0] : "");
+
+      const thumb = resolveMediaUrl(thumbRaw) || resolveMediaUrl(fullRaw) || placeholder;
+      const image = resolveMediaUrl(fullRaw) || resolveMediaUrl(thumbRaw) || placeholder;
+
+      return {
+        id: p.id,
+        name: p.title,
+        price: p.price,
+        condition: p.condition || "good",
+        category: p.category,
+
+        // ✅ 重点：ProductCard 会优先用 thumb
+        thumb,
+        // ✅ 备用：如果没有 thumb，也能用 image
+        image,
+      };
+    });
   }, [products]);
 
-  const categories = useMemo(
-    () => ["All", ...apiCategories],
-    [apiCategories]
-  );
+  const categories = useMemo(() => ["All", ...apiCategories], [apiCategories]);
 
   function clearFilters() {
     setSearch("");
@@ -137,8 +164,7 @@ function Home() {
 
     if (meMenuOpen) {
       document.addEventListener("click", handleClickOutside);
-      return () =>
-        document.removeEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [meMenuOpen]);
 
@@ -206,27 +232,19 @@ function Home() {
               <input
                 type="checkbox"
                 checked={sustainable}
-                onChange={(e) =>
-                  setSustainable(e.target.checked)
-                }
+                onChange={(e) => setSustainable(e.target.checked)}
               />
               Sustainable
             </label>
 
-            <button
-              className="clear-btn"
-              onClick={clearFilters}
-            >
+            <button className="clear-btn" onClick={clearFilters}>
               Clear
             </button>
           </div>
         </div>
 
         <div className="home-header-actions">
-          <div
-            className="me-dropdown"
-            ref={meMenuRef}
-          >
+          <div className="me-dropdown" ref={meMenuRef}>
             <button
               type="button"
               className="me-link me-link-btn"
@@ -236,11 +254,7 @@ function Home() {
               }}
             >
               Me{" "}
-              <span
-                className={`me-arrow ${
-                  meMenuOpen ? "me-arrow-open" : ""
-                }`}
-              >
+              <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
                 ▼
               </span>
             </button>
@@ -248,33 +262,18 @@ function Home() {
             {meMenuOpen && (
               <ul className="me-dropdown-menu">
                 <li>
-                  <Link
-                    to="/me"
-                    onClick={() =>
-                      setMeMenuOpen(false)
-                    }
-                  >
+                  <Link to="/me" onClick={() => setMeMenuOpen(false)}>
                     My profile
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    to="/my-products"
-                    onClick={() =>
-                      setMeMenuOpen(false)
-                    }
-                  >
+                  <Link to="/my-products" onClick={() => setMeMenuOpen(false)}>
                     Manage my products
                   </Link>
                 </li>
                 {currentUser?.role === "admin" && (
                   <li>
-                    <Link
-                      to="/admin/users"
-                      onClick={() =>
-                        setMeMenuOpen(false)
-                      }
-                    >
+                    <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
                       User management
                     </Link>
                   </li>
@@ -283,55 +282,31 @@ function Home() {
             )}
           </div>
 
-          <Link
-            to="/publish"
-            className="publish-link"
-          >
+          <Link to="/publish" className="publish-link">
             Publish product
           </Link>
 
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-          >
+          <button className="logout-btn" onClick={handleLogout}>
             Log out
           </button>
         </div>
       </div>
 
       <div className="product-list">
-        {loading && (
-          <p style={{ marginTop: 20 }}>
-            Loading products...
-          </p>
-        )}
+        {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}
         {error && (
-          <p
-            style={{
-              marginTop: 20,
-              color: "red",
-            }}
-          >
-            {error}
-          </p>
+          <p style={{ marginTop: 20, color: "red" }}>{error}</p>
         )}
 
         {!loading &&
           !error &&
           normalizedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
 
-        {!loading &&
-          !error &&
-          normalizedProducts.length === 0 && (
-            <p style={{ marginTop: 20 }}>
-              No products found.
-            </p>
-          )}
+        {!loading && !error && normalizedProducts.length === 0 && (
+          <p style={{ marginTop: 20 }}>No products found.</p>
+        )}
       </div>
     </div>
   );

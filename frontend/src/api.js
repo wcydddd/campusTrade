@@ -38,6 +38,9 @@ export function logout() {
 /**
  * 带认证头的 fetch，传入完整 URL，返回 Response。
  * 若响应为 401，会清除 token/user 并派发 auth:logout，调用方仍会收到 401 的 res。
+ *
+ * ✅ Enhancement (B):
+ * - 若响应为 429，会尝试解析 JSON 并挂到 res._data，方便调用方拿到更友好的提示信息
  */
 export async function authFetch(url, options = {}) {
   const token = localStorage.getItem("token");
@@ -46,10 +49,26 @@ export async function authFetch(url, options = {}) {
     ...(options.headers || {}),
   };
   if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(url, { ...options, headers });
+
+  // 401: 清理登录态
   if (res.status === 401) {
     logout();
+    return res;
   }
+
+  // ✅ 429: 解析返回体（不改变返回类型；只是附加字段，页面可选用）
+  if (res.status === 429) {
+    try {
+      const cloned = res.clone();
+      const text = await cloned.text();
+      res._data = text ? JSON.parse(text) : null;
+    } catch {
+      res._data = null;
+    }
+  }
+
   return res;
 }
 

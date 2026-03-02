@@ -3,28 +3,40 @@ import "./ProductCard.css";
 import { useNavigate } from "react-router-dom";
 
 const CATEGORY_DISPLAY = {
-  "教材": "Textbooks",
-  "电子产品": "Electronics",
-  "家具": "Furniture",
-  "服饰": "Clothing",
-  "运动器材": "Sports",
-  "其他": "Other",
+  教材: "Textbooks",
+  电子产品: "Electronics",
+  家具: "Furniture",
+  服饰: "Clothing",
+  运动器材: "Sports",
+  其他: "Other",
   Kitchen: "Other",
   Stationery: "Other",
 };
 
 function ProductCard({ product }) {
   const navigate = useNavigate();
-  const categoryLabel = product.category ? (CATEGORY_DISPLAY[product.category] ?? product.category) : "";
-  const fallbackImg = "https://dummyimage.com/400x400/cccccc/000000&text=CampusTrade";
+
+  const categoryLabel = product.category
+    ? CATEGORY_DISPLAY[product.category] ?? product.category
+    : "";
+
+  const fallbackImg =
+    "https://dummyimage.com/400x400/cccccc/000000&text=CampusTrade";
+
+  // ✅ C1：列表卡片优先用缩略图（thumb），没有就退回 image
+  const imgSrc = product.thumb || product.image || fallbackImg;
 
   return (
     <div className="product-card">
       <img
-        src={product.image}
+        src={imgSrc}
         alt={product.name}
+        loading="lazy"
         onError={(e) => {
-          e.currentTarget.src = fallbackImg;
+          // 避免死循环：如果已经是 fallback 还报错，就不要继续改 src
+          if (e.currentTarget.src !== fallbackImg) {
+            e.currentTarget.src = fallbackImg;
+          }
         }}
       />
 
@@ -35,6 +47,7 @@ function ProductCard({ product }) {
           <p className="price">£{product.price}</p>
           <span className="badge">{product.condition}</span>
         </div>
+
         {categoryLabel && (
           <p className="product-card-category">{categoryLabel}</p>
         )}

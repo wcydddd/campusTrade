@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch, logout } from "../api";
 
@@ -25,6 +25,9 @@ const CONDITION_OPTIONS = [
 const ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+/** C3: review threshold (对接后端 ai_confidence) */
+const AI_CONF_THRESHOLD = 0.75;
+
 /* ─── Helpers ─── */
 
 function validateImageFile(file) {
@@ -34,14 +37,16 @@ function validateImageFile(file) {
     return "Only JPG, PNG and WebP formats are supported.";
   }
   if (file.size > MAX_FILE_SIZE) {
-    return `File size must not exceed 10 MB (current: ${(file.size / 1024 / 1024).toFixed(1)} MB).`;
+    return `File size must not exceed 10 MB (current: ${(file.size / 1024 / 1024).toFixed(
+      1
+    )} MB).`;
   }
   return null;
 }
 
 function matchCategory(aiCategory, categories) {
   if (!aiCategory || !categories.length) return null;
-  const lower = aiCategory.toLowerCase().trim();
+  const lower = String(aiCategory).toLowerCase().trim();
 
   const direct = categories.find((c) => c.toLowerCase() === lower);
   if (direct) return direct;
@@ -62,6 +67,38 @@ function extractErrorMsg(data, fallback = "Request failed.") {
   }
   if (d && typeof d === "object") return d.msg || d.message || JSON.stringify(d);
   return data?.message || fallback;
+}
+
+/** C3: 从后端响应里取 needs_review / ai_confidence（兼容不同返回结构） */
+function extractReviewSignal(json) {
+  // 可能在顶层，也可能在 json.data 里
+  const needsReview =
+    json?.needs_review ??
+    json?.data?.needs_review ??
+    json?.needsReview ??
+    json?.data?.needsReview ??
+    false;
+
+  const confRaw =
+    json?.ai_confidence ??
+    json?.data?.ai_confidence ??
+    json?.aiConfidence ??
+    json?.data?.aiConfidence ??
+    null;
+
+  const aiConfidence = confRaw === null || confRaw === undefined ? null : Number(confRaw);
+
+  return {
+    needsReview: Boolean(needsReview),
+    aiConfidence: Number.isFinite(aiConfidence) ? aiConfidence : null,
+  };
+}
+
+/** C3: 是否需要弹出确认 Dialog */
+function shouldOpenReviewDialog({ needsReview, aiConfidence }) {
+  if (needsReview) return true;
+  if (aiConfidence !== null && aiConfidence < AI_CONF_THRESHOLD) return true;
+  return false;
 }
 
 /* ─── Spinner ─── */
@@ -106,6 +143,22 @@ export default function PublishProduct() {
   const [aiMessage, setAiMessage] = useState("");
   const [dragging, setDragging] = useState(false);
 
+  /* ── C2: AI usage/quota ── */
+  const [aiRemaining, setAiRemaining] = useState(null); // null=unknown, number=remaining
+  const [aiUsageLoading, setAiUsageLoading] = useState(false);
+  const [aiUsageError, setAiUsageError] = useState("");
+
+  /* ── C3: Review dialog state ── */
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDraft, setReviewDraft] = useState({
+    title: "",
+    description: "",
+    category: "",
+    aiConfidence: null,
+    needsReview: false,
+    mode: "preview", // preview | save
+  });
+
   /* ── Global state ── */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -126,12 +179,56 @@ export default function PublishProduct() {
         if (!cancelled) setError(e.message || "Failed to load categories.");
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* ── C2: fetch AI usage ── */
+  async function fetchAiUsage() {
+    setAiUsageError("");
+    setAiUsageLoading(true);
+    try {
+      const res = await authFetch(`${API_BASE}/ai/usage`);
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        logout();
+        setAiUsageError("Session expired. Please log in again.");
+        return;
+      }
+
+      if (res.status === 429) {
+        setAiUsageError("Too many requests. Please try again in a few minutes.");
+        return;
+      }
+
+      if (!res.ok) {
+        setAiUsageError(extractErrorMsg(data, "Failed to load AI usage."));
+        return;
+      }
+
+      const remaining = data?.daily_remaining ?? data?.remaining ?? data?.left ?? data?.quota ?? 0;
+      const n = Number(remaining);
+      setAiRemaining(Number.isFinite(n) ? n : 0);
+    } catch (e) {
+      setAiUsageError(e.message || "Failed to load AI usage.");
+    } finally {
+      setAiUsageLoading(false);
+    }
+  }
+
+  // 页面进入时先拉一次
+  useEffect(() => {
+    fetchAiUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Cleanup blob URL ── */
   useEffect(() => {
-    return () => { if (aiLocalPreview) URL.revokeObjectURL(aiLocalPreview); };
+    return () => {
+      if (aiLocalPreview) URL.revokeObjectURL(aiLocalPreview);
+    };
   }, [aiLocalPreview]);
 
   /* ═══ AI file selection (click / drag) ═══ */
@@ -154,11 +251,17 @@ export default function PublishProduct() {
       setAiImageUrl(null);
       setAiMessage("");
     },
-    [aiLocalPreview],
+    [aiLocalPreview]
   );
 
-  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
-  const onDragLeave = (e) => { e.preventDefault(); setDragging(false); };
+  const onDragOver = (e) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+  const onDragLeave = (e) => {
+    e.preventDefault();
+    setDragging(false);
+  };
   const onDrop = (e) => {
     e.preventDefault();
     setDragging(false);
@@ -169,18 +272,38 @@ export default function PublishProduct() {
   /* ═══ Apply AI data to form ═══ */
 
   function applyAiData(data) {
-    if (data.title) setTitle(data.title);
-    if (data.description) setDescription(data.description);
-    if (data.category) {
+    if (data?.title) setTitle(data.title);
+    if (data?.description) setDescription(data.description);
+    if (data?.category) {
       const matched = matchCategory(data.category, categories);
       if (matched) setCategory(matched);
     }
   }
 
+  /** C3: 打开 Review Dialog */
+  function openReviewDialog(payload, signal, mode) {
+    setReviewDraft({
+      title: payload?.title || "",
+      description: payload?.description || "",
+      category: payload?.category || "",
+      aiConfidence: signal.aiConfidence,
+      needsReview: signal.needsReview,
+      mode,
+    });
+    setReviewOpen(true);
+  }
+
+  const categoryOptionsForDialog = useMemo(() => {
+    // dialog 里的 category 下拉，直接用后端 categories
+    return Array.isArray(categories) ? categories : [];
+  }, [categories]);
+
   /* ═══ AI Preview (/ai/analyze — no image save) ═══ */
 
   async function handleAiPreview() {
+    if (aiRemaining === 0) return setAiError("Today's AI quota has reached the limit.");
     if (!aiFile) return setAiError("Please select an image first.");
+
     const valErr = validateImageFile(aiFile);
     if (valErr) {
       setAiError(valErr);
@@ -209,14 +332,31 @@ export default function PublishProduct() {
         return;
       }
 
+      if (res.status === 429) {
+        setAiRemaining(0);
+        setAiError("Today's AI quota has reached the limit. Please try tomorrow.");
+        return;
+      }
+
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.detail || "AI analysis failed.");
 
-      applyAiData(json.data);
-      setAiMessage(
-        "Preview complete! AI results have been filled into the form. " +
-        "The image was not saved — use \"AI Smart Publish\" to include it.",
-      );
+      const payload = json?.data || {};
+      const signal = extractReviewSignal(json);
+
+      // C3: 满足条件才弹窗，否则直接填入
+      if (shouldOpenReviewDialog(signal)) {
+        openReviewDialog(payload, signal, "preview");
+        setAiMessage("AI result requires confirmation. Please review and apply.");
+      } else {
+        applyAiData(payload);
+        setAiMessage(
+          'Preview complete! AI results have been filled into the form. The image was not saved — use "AI Smart Publish" to include it.'
+        );
+      }
+
+      // ✅ C2：调用后刷新配额
+      await fetchAiUsage();
     } catch (e) {
       setAiError(e.message || "AI preview failed.");
     } finally {
@@ -227,7 +367,9 @@ export default function PublishProduct() {
   /* ═══ AI Smart Publish (/ai/analyze-and-save — save image + analyze) ═══ */
 
   async function handleAiSave() {
+    if (aiRemaining === 0) return setAiError("Today's AI quota has reached the limit.");
     if (!aiFile) return setAiError("Please select an image first.");
+
     const valErr = validateImageFile(aiFile);
     if (valErr) {
       setAiError(valErr);
@@ -256,15 +398,34 @@ export default function PublishProduct() {
         return;
       }
 
+      if (res.status === 429) {
+        setAiRemaining(0);
+        setAiError("Today's AI quota has reached the limit. Please try tomorrow.");
+        return;
+      }
+
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.detail || "AI recognition failed.");
 
-      applyAiData(json.data);
+      const payload = json?.data || {};
+      const signal = extractReviewSignal(json);
+
+      // 先把保存后的 image_url 记住（不影响 dialog）
       if (json.image_url) setAiImageUrl(json.image_url);
-      setAiMessage(
-        "Image saved and AI results filled into the form. " +
-        "Please review, add price & condition, then click \"Confirm & Publish\".",
-      );
+
+      // C3: 满足条件才弹窗，否则直接填入
+      if (shouldOpenReviewDialog(signal)) {
+        openReviewDialog(payload, signal, "save");
+        setAiMessage("AI result requires confirmation. Please review and apply.");
+      } else {
+        applyAiData(payload);
+        setAiMessage(
+          'Image saved and AI results filled into the form. Please review, add price & condition, then click "Confirm & Publish".'
+        );
+      }
+
+      // ✅ C2：调用后刷新配额
+      await fetchAiUsage();
     } catch (e) {
       setAiError(e.message || "AI smart publish failed.");
     } finally {
@@ -368,7 +529,6 @@ export default function PublishProduct() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 px-4 py-6 md:px-8 md:py-10">
       <div className="mx-auto max-w-2xl space-y-6">
-
         {/* ── Page header ── */}
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800">Publish Product</h1>
@@ -384,10 +544,34 @@ export default function PublishProduct() {
               🤖
             </span>
             <h2 className="text-lg font-semibold text-gray-800">AI Smart Recognition</h2>
+
+            {/* ✅ C2: quota indicator */}
+            <div className="ml-auto text-sm text-gray-600">
+              {aiUsageLoading ? (
+                <span>Checking quota…</span>
+              ) : aiRemaining === null ? (
+                <span>Quota: —</span>
+              ) : (
+                <span>
+                  Today remaining:{" "}
+                  <b className={aiRemaining <= 0 ? "text-red-600" : "text-gray-800"}>
+                    {aiRemaining}
+                  </b>
+                </span>
+              )}
+            </div>
           </div>
-          <p className="mb-4 text-sm text-gray-500">
+
+          <p className="mb-2 text-sm text-gray-500">
             Upload a product photo and AI will generate the title, description and category for you
           </p>
+
+          {/* ✅ C2: usage error */}
+          {aiUsageError && (
+            <div className="mb-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+              {aiUsageError}
+            </div>
+          )}
 
           {/* Drag & drop / click upload zone */}
           <div
@@ -397,8 +581,8 @@ export default function PublishProduct() {
               dragging
                 ? "border-indigo-500 bg-indigo-50"
                 : aiLocalPreview
-                  ? "border-indigo-300 bg-indigo-50/30"
-                  : "border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/40"
+                ? "border-indigo-300 bg-indigo-50/30"
+                : "border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/40"
             } ${aiLocalPreview ? "p-4" : "p-10"}`}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
@@ -426,15 +610,11 @@ export default function PublishProduct() {
                   className="h-36 w-36 flex-shrink-0 rounded-lg object-cover shadow"
                 />
                 <div className="text-center sm:text-left">
-                  <p className="text-sm font-medium text-gray-700 break-all">
-                    {aiFile?.name}
-                  </p>
+                  <p className="text-sm font-medium text-gray-700 break-all">{aiFile?.name}</p>
                   <p className="mt-0.5 text-xs text-gray-400">
                     {(aiFile?.size / 1024 / 1024).toFixed(2)} MB
                   </p>
-                  <p className="mt-2 text-xs text-indigo-500">
-                    Click or drag to replace image
-                  </p>
+                  <p className="mt-2 text-xs text-indigo-500">Click or drag to replace image</p>
                   {aiImageUrl && (
                     <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                       Saved to server
@@ -457,12 +637,8 @@ export default function PublishProduct() {
                     d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                   />
                 </svg>
-                <p className="text-sm font-medium text-gray-600">
-                  Click to upload or drag an image here
-                </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Supports JPG / PNG / WebP, max 10 MB
-                </p>
+                <p className="text-sm font-medium text-gray-600">Click to upload or drag an image here</p>
+                <p className="mt-1 text-xs text-gray-400">Supports JPG / PNG / WebP, max 10 MB</p>
               </>
             )}
 
@@ -470,9 +646,7 @@ export default function PublishProduct() {
             {aiLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/80 backdrop-blur-sm">
                 <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600" />
-                <p className="text-sm font-medium text-indigo-600">
-                  AI is analysing your image…
-                </p>
+                <p className="text-sm font-medium text-indigo-600">AI is analysing your image…</p>
               </div>
             )}
           </div>
@@ -510,17 +684,19 @@ export default function PublishProduct() {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={aiLoading}
+                disabled={aiLoading || aiRemaining === 0}
                 onClick={handleAiPreview}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
+                title={aiRemaining === 0 ? "No AI quota left today" : ""}
               >
                 {aiLoading ? <Spinner /> : "🔍"} AI Preview
               </button>
               <button
                 type="button"
-                disabled={aiLoading}
+                disabled={aiLoading || aiRemaining === 0}
                 onClick={handleAiSave}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title={aiRemaining === 0 ? "No AI quota left today" : ""}
               >
                 {aiLoading ? <Spinner className="border-white/40 border-t-white" /> : "🚀"}{" "}
                 AI Smart Publish
@@ -708,6 +884,172 @@ export default function PublishProduct() {
           </form>
         </section>
       </div>
+
+      {/* ═══════ C3: Review Dialog ═══════ */}
+      {reviewOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setReviewOpen(false)}
+        >
+          <div
+            style={{
+              width: "min(860px, 100%)",
+              background: "#fff",
+              borderRadius: 16,
+              padding: 16,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <h3 style={{ margin: 0, fontSize: 18 }}>Confirm AI Result</h3>
+                <span style={{ fontSize: 13, color: "#6b7280" }}>
+                  Mode: {reviewDraft.mode === "save" ? "AI Smart Publish" : "AI Preview"}
+                </span>
+                {reviewDraft.aiConfidence !== null && (
+                  <span style={{ fontSize: 13, color: "#6b7280" }}>
+                    Confidence: {(reviewDraft.aiConfidence * 100).toFixed(0)}%
+                  </span>
+                )}
+                {reviewDraft.needsReview && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      background: "#fff7ed",
+                      color: "#c2410c",
+                      border: "1px solid #fed7aa",
+                    }}
+                  >
+                    needs_review
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                style={{ border: "none", background: "transparent", fontSize: 18, cursor: "pointer" }}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ margin: "10px 0 14px", color: "#4b5563", fontSize: 13 }}>
+              Backend flagged this AI result for manual confirmation. Please review and edit before applying.
+              (Trigger condition: <code>needs_review=true</code> or <code>ai_confidence&lt;{AI_CONF_THRESHOLD}</code>)
+            </p>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Title</label>
+                <input
+                  value={reviewDraft.title}
+                  onChange={(e) => setReviewDraft((p) => ({ ...p, title: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    marginTop: 6,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Description</label>
+                <textarea
+                  value={reviewDraft.description}
+                  onChange={(e) => setReviewDraft((p) => ({ ...p, description: e.target.value }))}
+                  rows={5}
+                  style={{
+                    width: "100%",
+                    marginTop: 6,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Category</label>
+                <select
+                  value={reviewDraft.category}
+                  onChange={(e) => setReviewDraft((p) => ({ ...p, category: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    marginTop: 6,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <option value="">(Select)</option>
+                  {categoryOptionsForDialog.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  applyAiData({
+                    title: reviewDraft.title,
+                    description: reviewDraft.description,
+                    category: reviewDraft.category,
+                  });
+                  setReviewOpen(false);
+                  setAiMessage("AI results applied after manual confirmation.");
+                }}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#4f46e5",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Apply to Form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
