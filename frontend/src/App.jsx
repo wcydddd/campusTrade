@@ -18,12 +18,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 默认进入商品列表（公开） */}
-        <Route path="/" element={<Navigate to="/home" replace />} />
+        {/* 默认：有 token 去首页，没有去登录 */}
+        <Route path="/" element={
+          localStorage.getItem("token")
+            ? <Navigate to="/home" replace />
+            : <Navigate to="/login" replace />
+        } />
 
-        {/* 公开页面 */}
-        <Route path="/home" element={<Home />} />
-        <Route path="/products/:id" element={<ProductDetail />} />
+        {/* 需要登录才能看商品列表 */}
+        <Route path="/home" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/products/:id" element={
+          <ProtectedRoute>
+            <ProductDetail />
+          </ProtectedRoute>
+        } />
 
         {/* 公开的认证相关页面 */}
         <Route path="/login" element={<Login />} />

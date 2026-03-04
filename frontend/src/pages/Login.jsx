@@ -1,8 +1,11 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { API_BASE } from "../api";
 
 export default function Login() {
+  const token = localStorage.getItem("token");
+  if (token) return <Navigate to="/home" replace />;
+
   // 表单状态
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
