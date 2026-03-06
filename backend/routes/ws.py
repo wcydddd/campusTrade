@@ -203,16 +203,15 @@ async def _handle_chat(from_id: str, data: dict, websocket: WebSocket):
         link=notif_link,
     )
 
-    # Push updated unread count to recipient so their badge refreshes
-    if delivered:
-        unread = await db.messages.count_documents({
-            "to_user_id": ObjectId(to_id),
-            "$or": [{"read": {"$exists": False}}, {"read": False}],
-        })
-        await manager.send_personal(to_id, {
-            "type": "unread_update",
-            "unread_count": unread,
-        })
+    # Always push unread count to recipient if they're online
+    unread = await db.messages.count_documents({
+        "to_user_id": ObjectId(to_id),
+        "$or": [{"read": {"$exists": False}}, {"read": False}],
+    })
+    await manager.send_personal(to_id, {
+        "type": "unread_update",
+        "unread_count": unread,
+    })
 
     await websocket.send_json({**envelope, "delivered": delivered})
 

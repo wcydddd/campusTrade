@@ -149,14 +149,36 @@ export default function Chat() {
   }, [messages]);
 
   // ── Send with product_id context ──
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text) return;
+    setInput("");
+
     const payload = { type: "chat", to: otherUserId, content: text };
     if (productIdRef.current) payload.product_id = productIdRef.current;
-    sendMessage(payload);
-    setInput("");
-  }, [input, otherUserId, sendMessage]);
+
+    const sent = sendMessage(payload);
+    if (!sent) {
+      try {
+        const body = {
+          to_user_id: otherUserId,
+          content: text,
+        };
+        if (productIdRef.current) body.product_id = productIdRef.current;
+        const res = await authFetch(`${API_BASE}/messages`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages((prev) => [
+            ...prev,
+            { id: data.id, from: myId, text, time: data.created_at, product_id: productIdRef.current },
+          ]);
+        }
+      } catch { /* ignore */ }
+    }
+  }, [input, otherUserId, sendMessage, myId]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 to-indigo-50">

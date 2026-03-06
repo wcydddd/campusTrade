@@ -101,6 +101,45 @@ async def send_message(
 
     res = await db.messages.insert_one(doc)
     doc["_id"] = res.inserted_id
+
+    # Push notification + unread_update (same as WebSocket path)
+    try:
+        from routes.notifications import create_notification
+        from routes.ws import manager
+
+        sender = await db.users.find_one({"_id": from_oid})
+        sender_name = sender.get("username", "Someone") if sender else "Someone"
+        notif_link = f"/chat/{current_user['user_id']}"
+        if payload.product_id:
+            notif_link += f"?product={payload.product_id}"
+        await create_notification(
+            user_id=payload.to_user_id,
+            ntype="new_order",
+            title="New message",
+            body=f"{sender_name}: {payload.content[:80]}",
+            link=notif_link,
+        )
+
+        unread = await db.messages.count_documents({
+            "to_user_id": to_oid,
+            "$or": [{"read": {"$exists": False}}, {"read": False}],
+        })
+        await manager.send_personal(payload.to_user_id, {
+            "type": "unread_update",
+            "unread_count": unread,
+        })
+        await manager.send_personal(payload.to_user_id, {
+            "type": "chat",
+            "message_id": str(res.inserted_id),
+            "from": current_user["user_id"],
+            "to": payload.to_user_id,
+            "content": payload.content,
+            "product_id": payload.product_id,
+            "created_at": doc["created_at"].isoformat(),
+        })
+    except Exception:
+        pass
+
     return _to_response(doc)
 
 
