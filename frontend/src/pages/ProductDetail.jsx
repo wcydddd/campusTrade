@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { API_BASE } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -23,6 +24,7 @@ function resolveMediaUrl(url) {
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,6 +73,7 @@ export default function ProductDetail() {
 
         setProduct({
           id: data.id,
+          seller_id: data.seller_id,
           name: data.title,
           price: data.price,
           condition: data.condition || "good",
@@ -168,16 +171,23 @@ export default function ProductDetail() {
           </p>
         )}
 
-        <button
-          onClick={() => navigate(`/chat/${product.id}`)}
-          style={{
-            padding: "10px 20px",
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          Chat with Seller
-        </button>
+        {user && product.seller_id && user.id !== product.seller_id && (
+          <button
+            onClick={() => navigate(`/chat/${product.seller_id}?product=${product.id}`)}
+            style={{
+              padding: "10px 20px",
+              fontSize: 16,
+              cursor: "pointer",
+            }}
+          >
+            Chat with Seller
+          </button>
+        )}
+        {user && product.seller_id && user.id === product.seller_id && (
+          <p style={{ color: "#64748b", fontSize: 14, fontStyle: "italic" }}>
+            This is your product.
+          </p>
+        )}
       </div>
     </div>
   );

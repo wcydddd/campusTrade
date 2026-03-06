@@ -10,6 +10,8 @@ from routes.admin import router as admin_router
 from routes.ai import router as ai_router
 from routes.products import router as products_router
 from routes.messages import router as messages_router
+from routes.ws import router as ws_router
+from routes.notifications import router as notifications_router
 
 app = FastAPI(
     title="CampusTrade API",
@@ -45,6 +47,8 @@ app.include_router(admin_router)
 app.include_router(products_router)
 app.include_router(ai_router)
 app.include_router(messages_router)
+app.include_router(ws_router)
+app.include_router(notifications_router)
 
 # 启动时连接数据库 + 建立索引
 @app.on_event("startup")

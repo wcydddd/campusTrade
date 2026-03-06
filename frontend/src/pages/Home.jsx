@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { API_BASE, logout } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { useUnread } from "../context/UnreadContext";
+import NotificationBell from "../components/NotificationBell";
 import "./Home.css";
 
 function buildQuery(params) {
@@ -32,6 +34,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { user: currentUser } = useAuth();
+  const { unreadCount } = useUnread();
 
   // 筛选状态
   const [search, setSearch] = useState("");
@@ -281,6 +284,17 @@ function Home() {
               </ul>
             )}
           </div>
+
+          <NotificationBell />
+
+          <Link to="/conversations" className="messages-link">
+            Messages
+            {unreadCount > 0 && (
+              <span className="unread-badge">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
 
           <Link to="/publish" className="publish-link">
             Publish product
