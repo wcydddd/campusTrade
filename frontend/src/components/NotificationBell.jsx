@@ -29,21 +29,41 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const panelRef = useRef(null);
 
-  // ── Fetch unread count on mount ──
+  // ── Fetch unread count and notification list on mount (keep history so list is not empty after return) ──
   useEffect(() => {
-    if (!isAuthenticated) { setUnread(0); return; }
+    if (!isAuthenticated) {
+      setUnread(0);
+      setItems([]);
+      return;
+    }
     let c = false;
     (async () => {
       try {
-        const r = await authFetch(`${API_BASE}/notifications/unread-count`);
-        if (r.ok) {
-          const d = await r.json();
-          if (!c) setUnread(d.unread_count ?? 0);
+        const [countRes, listRes] = await Promise.all([
+          authFetch(`${API_BASE}/notifications/unread-count`),
+          authFetch(`${API_BASE}/notifications?limit=50`),
+        ]);
+        if (!c && countRes.ok) {
+          const d = await countRes.json();
+          setUnread(d.unread_count ?? 0);
+        }
+        if (!c && listRes.ok) {
+          const data = await listRes.json();
+          setItems(Array.isArray(data) ? data : []);
         }
       } catch { /* ignore */ }
     })();
     return () => { c = true; };
   }, [isAuthenticated]);
+
+  // ── 同步：在 Messages 里查看某对话后，通知角标随之更新（来自 Chat 页的 notifications:unread_update） ──
+  useEffect(() => {
+    const handler = (e) => {
+      if (typeof e.detail?.total_unread === "number") setUnread(e.detail.total_unread);
+    };
+    window.addEventListener("notifications:unread_update", handler);
+    return () => window.removeEventListener("notifications:unread_update", handler);
+  }, []);
 
   // ── Real-time push from WebSocket ──
   useEffect(() => {
@@ -62,15 +82,15 @@ export default function NotificationBell() {
           created_at: n.created_at,
         },
         ...prev,
-      ].slice(0, 30);
+      ].slice(0, 50);
     });
   }, [lastMessage]);
 
-  // ── Fetch list when panel opens ──
+  // ── Fetch list when panel opens (all notifications, read + unread, so history is kept) ──
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await authFetch(`${API_BASE}/notifications?limit=20`);
+      const r = await authFetch(`${API_BASE}/notifications?limit=50`);
       if (r.ok) {
         const data = await r.json();
         setItems(data);
@@ -132,16 +152,20 @@ export default function NotificationBell() {
         type="button"
         onClick={toggle}
         aria-label="Notifications"
+        title={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
         style={{
           position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 40,
-          height: 40,
+          gap: 8,
+          padding: "10px 16px",
           borderRadius: 12,
           border: "none",
           background: "#0f172a",
+          color: "#fff",
+          fontSize: 14,
+          fontWeight: 500,
           cursor: "pointer",
           transition: "background 0.2s",
         }}
@@ -150,11 +174,11 @@ export default function NotificationBell() {
       >
         {/* Bell SVG */}
         <svg
-          width="20"
-          height="20"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="white"
+          stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -162,14 +186,13 @@ export default function NotificationBell() {
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
-
-        {/* Red dot */}
+        <span>Notifications</span>
         {unread > 0 && (
           <span
             style={{
               position: "absolute",
-              top: -4,
-              right: -4,
+              top: -6,
+              right: -8,
               minWidth: 18,
               height: 18,
               padding: "0 5px",

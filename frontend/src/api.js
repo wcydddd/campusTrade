@@ -1,5 +1,15 @@
+// 开发环境走 Vite 代理 /api -> 后端 8000，避免跨域；生产环境用环境变量或同 host:8000
+const _backendOrigin =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "" : `http://${window.location.hostname}:8000`);
 export const API_BASE =
-  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
+  _backendOrigin || (typeof window !== "undefined" ? "/api" : "http://127.0.0.1:8000");
+// WebSocket：开发时用当前 host + /api，由 Vite 代理到后端
+export const WS_BASE =
+  import.meta.env.VITE_WS_URL ||
+  (import.meta.env.DEV && typeof window !== "undefined"
+    ? `ws://${window.location.host}/api`
+    : (API_BASE.startsWith("http") ? API_BASE.replace(/^http/, "ws") : `ws://${window.location?.host || "127.0.0.1:5173"}/api`));
 
 async function parseJsonSafe(res) {
   const text = await res.text();

@@ -181,7 +181,12 @@ async def list_conversations(
         {"$sort": {"created_at": -1}},
         {
             "$group": {
-                "_id": "$other_user_id",
+                "_id": {
+                    "other_user_id": "$other_user_id",
+                    "product_id_key": {
+                        "$ifNull": [{"$toString": "$product_id"}, "general"],
+                    },
+                },
                 "last_message": {"$first": "$content"},
                 "last_time": {"$first": "$created_at"},
                 "last_product_id": {"$first": "$product_id"},
@@ -192,7 +197,7 @@ async def list_conversations(
         {
             "$lookup": {
                 "from": "users",
-                "localField": "_id",
+                "localField": "_id.other_user_id",
                 "foreignField": "_id",
                 "as": "user_info",
             }
@@ -232,7 +237,7 @@ async def list_conversations(
 
     return [
         ConversationResponse(
-            other_user_id=str(d["_id"]),
+            other_user_id=str(d["_id"]["other_user_id"]),
             other_username=d["other_username"],
             last_message=d["last_message"],
             last_time=d["last_time"],
@@ -270,19 +275,24 @@ async def get_unread_count(
 @router.post("/conversations/{other_user_id}/read")
 async def mark_conversation_read(
     other_user_id: str,
+    product_id: str | None = Query(None),
     current_user: dict = Depends(require_verified_user),
 ):
-    """Mark all messages FROM other_user TO current_user as read."""
+    """Mark messages FROM other_user TO current_user as read (optionally only for one product)."""
     db = get_database()
     uid = _oid(current_user["user_id"])
     other_oid = _oid(other_user_id)
 
+    filter_query = {
+        "from_user_id": other_oid,
+        "to_user_id": uid,
+        "$or": [{"read": {"$exists": False}}, {"read": False}],
+    }
+    if product_id:
+        filter_query["product_id"] = _oid(product_id)
+
     result = await db.messages.update_many(
-        {
-            "from_user_id": other_oid,
-            "to_user_id": uid,
-            "$or": [{"read": {"$exists": False}}, {"read": False}],
-        },
+        filter_query,
         {"$set": {"read": True}},
     )
 
@@ -290,6 +300,16 @@ async def mark_conversation_read(
         "to_user_id": uid,
         "$or": [{"read": {"$exists": False}}, {"read": False}],
     })
+
+    try:
+        from routes.ws import manager
+        await manager.send_personal(str(other_user_id), {
+            "type": "messages_read",
+            "reader_id": str(current_user["user_id"]),
+            "product_id": str(product_id) if product_id else None,
+        })
+    except Exception:
+        pass
 
     return {
         "marked": result.modified_count,

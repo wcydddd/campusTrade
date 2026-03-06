@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { API_BASE } from "../api";
-
-const WS_BASE = API_BASE.replace(/^http/, "ws");
+import { WS_BASE } from "../api";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const PONG_TIMEOUT_MS = 10_000;

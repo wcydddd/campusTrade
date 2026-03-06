@@ -219,9 +219,8 @@ async def _handle_chat(from_id: str, data: dict, websocket: WebSocket):
 async def _handle_read(user_id: str, data: dict, websocket: WebSocket):
     """
     Expected payload:
-        { "type": "read", "other_user_id": "<user_id>" }
-    Marks all messages from other_user -> current user as read, and pushes
-    back the new total unread count.
+        { "type": "read", "other_user_id": "<user_id>", "product_id": "<id>" (optional) }
+    Marks messages from other_user -> current user as read (optionally only for one product).
     """
     other_id = data.get("other_user_id")
     if not other_id:
@@ -235,12 +234,17 @@ async def _handle_read(user_id: str, data: dict, websocket: WebSocket):
     uid = ObjectId(user_id)
     other_oid = ObjectId(other_id)
 
+    filter_query = {
+        "from_user_id": other_oid,
+        "to_user_id": uid,
+        "$or": [{"read": {"$exists": False}}, {"read": False}],
+    }
+    product_id = data.get("product_id")
+    if product_id and ObjectId.is_valid(product_id):
+        filter_query["product_id"] = ObjectId(product_id)
+
     await db.messages.update_many(
-        {
-            "from_user_id": other_oid,
-            "to_user_id": uid,
-            "$or": [{"read": {"$exists": False}}, {"read": False}],
-        },
+        filter_query,
         {"$set": {"read": True}},
     )
 
@@ -252,4 +256,11 @@ async def _handle_read(user_id: str, data: dict, websocket: WebSocket):
     await websocket.send_json({
         "type": "unread_update",
         "unread_count": remaining,
+    })
+
+    # 通知发送方：对方已读，发送方界面可把「未读」改为「已读」
+    await manager.send_personal(str(other_id), {
+        "type": "messages_read",
+        "reader_id": str(user_id),
+        "product_id": str(product_id) if product_id else None,
     })

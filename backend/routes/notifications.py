@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from typing import List
 from datetime import datetime
 from bson import ObjectId
+from pydantic import BaseModel
 
 from utils.database import get_database
 from utils.security import get_current_user
 from models.notification import NotificationResponse
+
+
+class ReadByLinkBody(BaseModel):
+    """Mark all notifications with this chat link (or link starting with it) as read."""
+    link: str
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -101,6 +107,41 @@ async def mark_notification_read(
         "$or": [{"read": {"$exists": False}}, {"read": False}],
     })
     return {"ok": True, "total_unread": remaining}
+
+
+# =====================================================
+# POST /notifications/read-by-link — mark by chat link (sync with Messages)
+# =====================================================
+
+@router.post("/read-by-link")
+async def mark_read_by_link(
+    body: ReadByLinkBody = Body(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Mark as read all notifications whose link equals or starts with the given chat link. Used when user opens that chat from Messages so the notification bell stays in sync."""
+    import re
+    db = get_database()
+    uid = _oid(current_user["user_id"])
+    link = (body.link or "").strip()
+    if not link.startswith("/chat/"):
+        remaining = await db.notifications.count_documents({
+            "user_id": uid,
+            "$or": [{"read": {"$exists": False}}, {"read": False}],
+        })
+        return {"ok": True, "marked": 0, "total_unread": remaining}
+
+    safe = re.escape(link)
+    filter_unread = {"user_id": uid, "$or": [{"read": {"$exists": False}}, {"read": False}]}
+    filter_link = {"$or": [{"link": link}, {"link": {"$regex": f"^{safe}\\?"}}]}
+    result = await db.notifications.update_many(
+        {"$and": [filter_unread, filter_link]},
+        {"$set": {"read": True}},
+    )
+    remaining = await db.notifications.count_documents({
+        "user_id": uid,
+        "$or": [{"read": {"$exists": False}}, {"read": False}],
+    })
+    return {"ok": True, "marked": result.modified_count, "total_unread": remaining}
 
 
 # =====================================================

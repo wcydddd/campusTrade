@@ -76,7 +76,7 @@ export default function ProductDetail() {
 
         setProduct({
           id: data.id,
-          seller_id: data.seller_id,
+          seller_id: data.seller_id || data.user_id || "",
           name: data.title,
           price: data.price,
           condition: data.condition || "good",
@@ -84,7 +84,6 @@ export default function ProductDetail() {
           description: data.description,
           image,
           status: data.status || "available",
-          seller_id: data.seller_id || data.user_id || "",
         });
         setFavorited(!!data.is_favorited);
       } catch (e) {

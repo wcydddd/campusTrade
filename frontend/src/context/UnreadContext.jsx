@@ -44,18 +44,20 @@ export function UnreadProvider({ children }) {
   }, [lastMessage]);
 
   /**
-   * Mark a conversation as read via WebSocket + optimistically update the
-   * local badge.  Falls back to REST if WS is unavailable.
+   * Mark a conversation as read (optionally only for one product).
+   * Uses WebSocket when available, else REST.
    */
   const markConversationRead = useCallback(
-    async (otherUserId) => {
-      const sent = sendMessage({ type: "read", other_user_id: otherUserId });
+    async (otherUserId, productId = null) => {
+      const payload = { type: "read", other_user_id: otherUserId };
+      if (productId) payload.product_id = productId;
+      const sent = sendMessage(payload);
       if (!sent) {
         try {
-          const res = await authFetch(
-            `${API_BASE}/messages/conversations/${otherUserId}/read`,
-            { method: "POST" },
-          );
+          const url = productId
+            ? `${API_BASE}/messages/conversations/${otherUserId}/read?product_id=${productId}`
+            : `${API_BASE}/messages/conversations/${otherUserId}/read`;
+          const res = await authFetch(url, { method: "POST" });
           if (res.ok) {
             const data = await res.json();
             setUnreadCount(data.total_unread ?? 0);

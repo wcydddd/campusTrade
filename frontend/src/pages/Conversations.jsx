@@ -9,6 +9,22 @@ function resolveMediaUrl(url) {
   return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
 }
 
+/** 格式化为：今天/昨天 HH:mm，或 M月D日 HH:mm，或 YYYY/M/D */
+function formatConversationTime(isoStr) {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const time = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (t.getTime() === today.getTime()) return `今天 ${time}`;
+  if (t.getTime() === yesterday.getTime()) return `昨天 ${time}`;
+  if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日 ${time}`;
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${time}`;
+}
+
 export default function Conversations() {
   const navigate = useNavigate();
   const { unreadCount } = useUnread();
@@ -33,6 +49,22 @@ export default function Conversations() {
       }
     })();
 
+    return () => { cancelled = true; };
+  }, []);
+
+  // 进入 Messages 列表即视为已查看：把所有通知标为已读，与主页 notification 角标同步（避免列表已读但铃铛仍显示数字）
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && typeof data.total_unread === "number") {
+          window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: data.total_unread } }));
+        }
+      } catch { /* ignore */ }
+    })();
     return () => { cancelled = true; };
   }, []);
 
@@ -87,9 +119,10 @@ export default function Conversations() {
         <div className="space-y-3">
           {conversations.map((c) => {
             const productImg = resolveMediaUrl(c.product_image);
+            const listKey = `${c.other_user_id}-${c.product_id ?? "none"}`;
             return (
               <Link
-                key={c.other_user_id}
+                key={listKey}
                 to={chatLink(c)}
                 className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 transition hover:shadow-md"
               >
@@ -106,29 +139,29 @@ export default function Conversations() {
                   </div>
                 )}
 
-                {/* Text */}
+                {/* Text：同一卖家多商品时显示为「卖家 · 商品名」独立会话 */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="truncate font-semibold text-gray-800">
-                      {c.other_username}
+                      {c.product_title
+                        ? `${c.other_username} · ${c.product_title}`
+                        : c.other_username}
                     </span>
-                    <span className="ml-2 shrink-0 text-xs text-gray-400">
-                      {new Date(c.last_time).toLocaleDateString()}
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {formatConversationTime(c.last_time)}
                     </span>
                   </div>
-
-                  {c.product_title && (
-                    <p className="truncate text-xs text-indigo-500">
-                      Re: {c.product_title}
-                    </p>
-                  )}
-
-                  <p className="mt-0.5 truncate text-sm text-gray-500">
-                    {c.last_message}
-                  </p>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <span className={c.unread_count > 0 ? "text-xs font-medium text-indigo-600" : "text-xs text-gray-400"}>
+                      {c.unread_count > 0 ? "未读" : "已读"}
+                    </span>
+                    <span className="truncate text-sm text-gray-500">
+                      {c.last_message}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Unread badge */}
+                {/* Unread count badge */}
                 {c.unread_count > 0 && (
                   <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
                     {c.unread_count > 99 ? "99+" : c.unread_count}
