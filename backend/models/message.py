@@ -40,8 +40,10 @@ class MessageInDB(BaseModel):
 
 class MessageResponse(BaseModel):
     id: str
+    conversation_id: Optional[str] = None
     from_user_id: str
     to_user_id: str
     content: str
     product_id: Optional[str] = None
+    read_at: Optional[datetime] = None
     created_at: datetime

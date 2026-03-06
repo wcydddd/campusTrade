@@ -65,6 +65,32 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return {"user_id": user_id, "email": payload.get("email")}
 
 
+async def get_current_admin_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """获取当前用户，且必须是 admin 角色"""
+    from utils.database import get_database
+
+    current = await get_current_user(credentials)
+    db = get_database()
+
+    from bson import ObjectId
+    try:
+        uid = ObjectId(current["user_id"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid user id")
+
+    user = await db.users.find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if user.get("is_banned", False):
+        raise HTTPException(status_code=403, detail="Account is banned")
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    return current
+
+
 def is_valid_university_email(email: str) -> bool:
     """检查是否是学校邮箱"""
     allowed_domains = settings.allowed_email_domains.split(",")

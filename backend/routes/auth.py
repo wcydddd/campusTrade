@@ -256,15 +256,19 @@ async def _do_login(user_data: UserLogin):
     if user.get("is_verified") is False:
         raise HTTPException(status_code=403, detail="Email not verified. Please verify your email first.")
 
-    # 3) 验证密码
+    # 3) 封禁用户：禁止登录
+    if user.get("is_banned", False):
+        raise HTTPException(status_code=403, detail="Account is banned. Please contact admin.")
+
+    # 4) 验证密码
     if not verify_password(user_data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # 4) 生成 token
+    # 5) 生成 token
     user_id = str(user["_id"])
     access_token = create_access_token(data={"sub": user_id, "email": user["email"]})
 
-    # 5) 返回 token + user
+    # 6) 返回 token + user
     user_response = UserResponse(
         id=user_id,
         email=user["email"],
