@@ -76,6 +76,7 @@ export default function ProductDetail() {
 
         setProduct({
           id: data.id,
+          seller_id: data.seller_id,
           name: data.title,
           price: data.price,
           condition: data.condition || "good",
@@ -233,7 +234,7 @@ export default function ProductDetail() {
         )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {product.status !== "sold" && product.seller_id !== user?.id && (
+          {product.status !== "sold" && user && product.seller_id && user.id !== product.seller_id && (
             <button
               onClick={handleOrder}
               disabled={ordering}
@@ -251,25 +252,32 @@ export default function ProductDetail() {
               {ordering ? "Placing..." : "Buy Now"}
             </button>
           )}
-          <button
-            onClick={() => navigate(`/chat/${product.id}`)}
-            style={{
-              padding: "12px 24px",
-              fontSize: 16,
-              cursor: "pointer",
-              background: "#0f172a",
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              fontWeight: 600,
-            }}
-          >
-            Chat with Seller
-          </button>
+          {user && product.seller_id && user.id !== product.seller_id && (
+            <button
+              onClick={() => navigate(`/chat/${product.seller_id}?product=${product.id}`)}
+              style={{
+                padding: "12px 24px",
+                fontSize: 16,
+                cursor: "pointer",
+                background: "#0f172a",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                fontWeight: 600,
+              }}
+            >
+              Chat with Seller
+            </button>
+          )}
         </div>
         {orderMsg && (
           <p style={{ marginTop: 12, color: orderMsg.includes("success") ? "#16a34a" : "#ef4444", fontWeight: 600 }}>
             {orderMsg}
+          </p>
+        )}
+        {user && product.seller_id && user.id === product.seller_id && (
+          <p style={{ color: "#64748b", fontSize: 14, fontStyle: "italic" }}>
+            This is your product.
           </p>
         )}
       </div>

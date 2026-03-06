@@ -10,6 +10,7 @@ import MyFavorites from "./pages/MyFavorites";
 import AdminUsers from "./pages/AdminUsers";
 import ChangePassword from "./pages/ChangePassword";
 import Chat from "./pages/Chat";
+import Conversations from "./pages/Conversations";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -54,9 +55,19 @@ function App() {
           }
         />
 
-        {/* 需要登录（不强制 verified） */}
+        {/* Conversations list */}
         <Route
-          path="/chat/:productId"
+          path="/conversations"
+          element={
+            <ProtectedRoute>
+              <Conversations />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Single chat with a user */}
+        <Route
+          path="/chat/:otherUserId"
           element={
             <ProtectedRoute>
               <Chat />
