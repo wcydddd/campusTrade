@@ -32,6 +32,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { user: currentUser } = useAuth();
+  const [trending, setTrending] = useState([]);
 
   // 筛选状态
   const [search, setSearch] = useState("");
@@ -43,23 +44,49 @@ function Home() {
   // 获取分类
   useEffect(() => {
     let cancelled = false;
-
     async function fetchCategories() {
       try {
         const res = await fetch(`${API_BASE}/products/categories`);
         if (!res.ok) return;
         const data = await res.json();
         const cats = data?.categories;
-        if (!cancelled) {
-          setApiCategories(Array.isArray(cats) ? cats : []);
+        if (!cancelled) setApiCategories(Array.isArray(cats) ? cats : []);
+      } catch {}
+    }
+    fetchCategories();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 获取热门榜单
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchTrending() {
+      try {
+        const res = await fetch(`${API_BASE}/products/trending`);
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!cancelled && Array.isArray(list)) {
+          setTrending(list.map((p) => {
+            const placeholder = "https://placehold.co/400x400";
+            const thumbRaw = p.thumb_url || p.thumbnail_url || "";
+            const fullRaw = p.image_url || p.imageUrl || (p.images?.length ? p.images[0] : "");
+            return {
+              id: p.id,
+              name: p.title,
+              price: p.price,
+              condition: p.condition || "good",
+              category: p.category,
+              status: p.status || "available",
+              is_favorited: !!p.is_favorited,
+              thumb: resolveMediaUrl(thumbRaw) || resolveMediaUrl(fullRaw) || placeholder,
+              image: resolveMediaUrl(fullRaw) || resolveMediaUrl(thumbRaw) || placeholder,
+            };
+          }));
         }
       } catch {}
     }
-
-    fetchCategories();
-    return () => {
-      cancelled = true;
-    };
+    fetchTrending();
+    return () => { cancelled = true; };
   }, []);
 
   // 获取商品
@@ -132,10 +159,9 @@ function Home() {
         price: p.price,
         condition: p.condition || "good",
         category: p.category,
-
-        // ✅ 重点：ProductCard 会优先用 thumb
+        status: p.status || "available",
+        is_favorited: !!p.is_favorited,
         thumb,
-        // ✅ 备用：如果没有 thumb，也能用 image
         image,
       };
     });
@@ -271,6 +297,16 @@ function Home() {
                     Manage my products
                   </Link>
                 </li>
+                <li>
+                  <Link to="/my-orders" onClick={() => setMeMenuOpen(false)}>
+                    My orders
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/my-favorites" onClick={() => setMeMenuOpen(false)}>
+                    My favorites
+                  </Link>
+                </li>
                 {currentUser?.role === "admin" && (
                   <li>
                     <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
@@ -291,6 +327,21 @@ function Home() {
           </button>
         </div>
       </div>
+
+      {trending.length > 0 && (
+        <div className="trending-section">
+          <h2 className="trending-title">Trending</h2>
+          <div className="trending-scroll">
+            {trending.map((p) => (
+              <div key={p.id} className="trending-item" onClick={() => navigate(`/products/${p.id}`)}>
+                <img src={p.thumb} alt={p.name} onError={(e) => { e.currentTarget.src = "https://placehold.co/200x200"; }} />
+                <p className="trending-item-name">{p.name}</p>
+                <p className="trending-item-price">£{p.price}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="product-list">
         {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}

@@ -1,6 +1,7 @@
-// src/components/ProductCard.jsx
+import { useState } from "react";
 import "./ProductCard.css";
 import { useNavigate } from "react-router-dom";
+import { API_BASE, authFetch } from "../api";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -15,6 +16,9 @@ const CATEGORY_DISPLAY = {
 
 function ProductCard({ product }) {
   const navigate = useNavigate();
+  const [fav, setFav] = useState(!!product.is_favorited);
+
+  const isSold = product.status === "sold";
 
   const categoryLabel = product.category
     ? CATEGORY_DISPLAY[product.category] ?? product.category
@@ -23,25 +27,49 @@ function ProductCard({ product }) {
   const fallbackImg =
     "https://dummyimage.com/400x400/cccccc/000000&text=CampusTrade";
 
-  // ✅ C1：列表卡片优先用缩略图（thumb），没有就退回 image
   const imgSrc = product.thumb || product.image || fallbackImg;
 
+  async function toggleFav(e) {
+    e.stopPropagation();
+    const prev = fav;
+    setFav(!prev);
+    try {
+      const res = await authFetch(`${API_BASE}/favorites/${product.id}`, {
+        method: prev ? "DELETE" : "POST",
+      });
+      if (!res.ok) setFav(prev);
+    } catch {
+      setFav(prev);
+    }
+  }
+
   return (
-    <div className="product-card">
-      <img
-        src={imgSrc}
-        alt={product.name}
-        loading="lazy"
-        onError={(e) => {
-          // 避免死循环：如果已经是 fallback 还报错，就不要继续改 src
-          if (e.currentTarget.src !== fallbackImg) {
-            e.currentTarget.src = fallbackImg;
-          }
-        }}
-      />
+    <div className={`product-card ${isSold ? "product-card-sold" : ""}`}>
+      <div className="product-card-img-wrap">
+        <img
+          src={imgSrc}
+          alt={product.name}
+          loading="lazy"
+          onError={(e) => {
+            if (e.currentTarget.src !== fallbackImg) {
+              e.currentTarget.src = fallbackImg;
+            }
+          }}
+        />
+        {isSold && <span className="product-card-sold-badge">SOLD</span>}
+      </div>
 
       <div className="product-card-body">
-        <h3 className="product-card-title">{product.name}</h3>
+        <div className="product-card-title-row">
+          <h3 className="product-card-title">{product.name}</h3>
+          <button
+            className={`product-card-fav ${fav ? "product-card-fav-active" : ""}`}
+            onClick={toggleFav}
+            title={fav ? "Remove from favorites" : "Add to favorites"}
+          >
+            {fav ? "♥" : "♡"}
+          </button>
+        </div>
 
         <div className="product-card-meta">
           <p className="price">£{product.price}</p>

@@ -5,6 +5,8 @@ import PublishProduct from "./pages/PublishProduct";
 import MyProducts from "./pages/MyProducts";
 import EditProduct from "./pages/EditProduct";
 import MeProfile from "./pages/MeProfile";
+import MyOrders from "./pages/MyOrders";
+import MyFavorites from "./pages/MyFavorites";
 import AdminUsers from "./pages/AdminUsers";
 import ChangePassword from "./pages/ChangePassword";
 import Chat from "./pages/Chat";
@@ -92,6 +94,23 @@ function App() {
           element={
             <ProtectedRoute>
               <EditProduct />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-orders"
+          element={
+            <ProtectedRoute>
+              <MyOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-favorites"
+          element={
+            <ProtectedRoute>
+              <MyFavorites />
             </ProtectedRoute>
           }
         />

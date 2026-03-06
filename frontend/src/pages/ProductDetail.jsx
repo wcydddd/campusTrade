@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { API_BASE } from "../api";
+import { API_BASE, authFetch } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -23,9 +24,13 @@ function resolveMediaUrl(url) {
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [favorited, setFavorited] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const [orderMsg, setOrderMsg] = useState("");
 
   const fallbackImg =
     "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade";
@@ -77,7 +82,10 @@ export default function ProductDetail() {
           category: data.category,
           description: data.description,
           image,
+          status: data.status || "available",
+          seller_id: data.seller_id || data.user_id || "",
         });
+        setFavorited(!!data.is_favorited);
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load product");
       } finally {
@@ -90,6 +98,41 @@ export default function ProductDetail() {
       cancelled = true;
     };
   }, [id]);
+
+  async function toggleFavorite() {
+    const prev = favorited;
+    setFavorited(!prev);
+    try {
+      const res = await authFetch(`${API_BASE}/favorites/${id}`, {
+        method: prev ? "DELETE" : "POST",
+      });
+      if (!res.ok) setFavorited(prev);
+    } catch {
+      setFavorited(prev);
+    }
+  }
+
+  async function handleOrder() {
+    if (!window.confirm(`Place order for "${product.name}" at £${product.price}?`)) return;
+    setOrdering(true);
+    setOrderMsg("");
+    try {
+      const res = await authFetch(`${API_BASE}/orders`, {
+        method: "POST",
+        body: JSON.stringify({ product_id: product.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setOrderMsg("Order placed successfully!");
+      } else {
+        setOrderMsg(data.detail || data.message || "Order failed");
+      }
+    } catch (e) {
+      setOrderMsg(e.message || "Order failed");
+    } finally {
+      setOrdering(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -141,11 +184,32 @@ export default function ProductDetail() {
 
       {/* 信息区域 */}
       <div style={{ flex: 1, minWidth: 280 }}>
-        <button onClick={() => navigate(-1)} style={{ marginBottom: 20 }}>
-          ← Back
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={() => navigate(-1)}>← Back</button>
+          <button
+            onClick={toggleFavorite}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: 26,
+              cursor: "pointer",
+              color: favorited ? "#ef4444" : "#cbd5e1",
+              transition: "color 0.15s, transform 0.15s",
+              transform: favorited ? "scale(1.15)" : "scale(1)",
+            }}
+            title={favorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            {favorited ? "♥" : "♡"}
+          </button>
+        </div>
 
         <h1 style={{ marginBottom: 10 }}>{product.name}</h1>
+
+        {product.status === "sold" && (
+          <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 999, background: "#fee2e2", color: "#991b1b", fontWeight: 600, fontSize: 13, marginBottom: 12 }}>
+            SOLD
+          </span>
+        )}
 
         <p style={{ fontSize: 22, fontWeight: "bold", marginBottom: 12 }}>
           £{product.price}
@@ -168,16 +232,46 @@ export default function ProductDetail() {
           </p>
         )}
 
-        <button
-          onClick={() => navigate(`/chat/${product.id}`)}
-          style={{
-            padding: "10px 20px",
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          Chat with Seller
-        </button>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {product.status !== "sold" && product.seller_id !== user?.id && (
+            <button
+              onClick={handleOrder}
+              disabled={ordering}
+              style={{
+                padding: "12px 24px",
+                fontSize: 16,
+                cursor: ordering ? "not-allowed" : "pointer",
+                background: "#4f46e5",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                fontWeight: 600,
+              }}
+            >
+              {ordering ? "Placing..." : "Buy Now"}
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/chat/${product.id}`)}
+            style={{
+              padding: "12px 24px",
+              fontSize: 16,
+              cursor: "pointer",
+              background: "#0f172a",
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            Chat with Seller
+          </button>
+        </div>
+        {orderMsg && (
+          <p style={{ marginTop: 12, color: orderMsg.includes("success") ? "#16a34a" : "#ef4444", fontWeight: 600 }}>
+            {orderMsg}
+          </p>
+        )}
       </div>
     </div>
   );
