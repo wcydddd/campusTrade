@@ -34,6 +34,7 @@ export default function MyFavorites() {
               price: p.price,
               condition: p.condition || "good",
               category: p.category,
+              is_favorited: true,
               thumb: resolveMediaUrl(thumbRaw) || resolveMediaUrl(fullRaw) || placeholder,
               image: resolveMediaUrl(fullRaw) || resolveMediaUrl(thumbRaw) || placeholder,
             };
@@ -70,7 +71,11 @@ export default function MyFavorites() {
       {!loading && !error && products.length > 0 && (
         <div className="my-favorites-grid">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              onUnfavorited={(id) => setProducts((prev) => prev.filter((x) => x.id !== id))}
+            />
           ))}
         </div>
       )}

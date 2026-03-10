@@ -3,17 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import "./PublishProduct.css";
 
-const CATEGORY_TO_ENUM = {
-  Electronics: "电子产品",
-  Textbooks: "教材",
-  Furniture: "家具",
-  Clothing: "服饰",
-  Sports: "运动器材",
-  Kitchen: "其他",
-  Stationery: "其他",
-  Other: "其他",
-};
-
 const ENUM_TO_CATEGORY = {
   "教材": "Textbooks",
   "电子产品": "Electronics",
@@ -111,7 +100,7 @@ export default function EditProduct() {
 
     setLoading(true);
     try {
-      const categoryForApi = CATEGORY_TO_ENUM[category] ?? "其他";
+      const categoryForApi = category || "Other";
       const res = await authFetch(`${API_BASE}/products/${id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -126,7 +115,14 @@ export default function EditProduct() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || data.message || "Update failed.");
+      if (!res.ok) {
+        const msg = typeof data.detail === "string"
+          ? data.detail
+          : Array.isArray(data.detail)
+            ? data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ")
+            : data.message || JSON.stringify(data.detail || "Update failed.");
+        throw new Error(msg);
+      }
       setSuccess("Product updated.");
       setTimeout(() => navigate("/my-products"), 1500);
     } catch (err) {
@@ -166,12 +162,11 @@ export default function EditProduct() {
 
           <label>Price (£) *</label>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
             placeholder="0.00"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
           />
 
           <label>Category *</label>

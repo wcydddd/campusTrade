@@ -2,14 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
-import uuid
-import os
 from pathlib import Path
 
 from utils.database import get_database
 from utils.security import get_current_user
 from utils.ai_helper import analyze_image, get_categories
-from models.product import ProductCreate, ProductResponse, ProductInDB
+from utils.image_service import process_and_save_image, process_image_bytes, delete_image
+from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
 from config import settings
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -40,6 +39,7 @@ def _to_response(doc: dict) -> ProductResponse:
         views=doc.get("views", 0),
         created_at=doc.get("created_at"),
         updated_at=doc.get("updated_at"),
+        thumb_url=doc.get("thumb_url"),
     )
 
 
@@ -59,32 +59,6 @@ async def get_verified_user(current_user: dict, db):
     return user, uid
 
 
-async def save_upload_file(file: UploadFile) -> tuple[str, bytes]:
-    """Save an uploaded file and return (image_url, file_content)."""
-    file_ext = file.filename.split(".")[-1].lower() if file.filename else ""
-    if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file format. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
-    
-    content = await file.read()
-    
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File too large. Maximum size: {settings.max_upload_size_mb}MB"
-        )
-    
-    filename = f"{uuid.uuid4()}.{file_ext}"
-    filepath = UPLOAD_DIR / filename
-    
-    with open(filepath, "wb") as f:
-        f.write(content)
-    
-    return f"/uploads/{filename}", content
-
-
 # =====================================================
 # GET /products - List products (public)
 # =====================================================
@@ -96,11 +70,14 @@ async def list_products(
     min_price: Optional[float] = Query(default=None, description="Minimum price"),
     max_price: Optional[float] = Query(default=None, description="Maximum price"),
     search: Optional[str] = Query(default=None, description="Search in title/description"),
+    include_sold: bool = Query(default=False, description="Include sold products (default: exclude)"),
 ):
-    """List products with optional filters. Public access."""
+    """List products with optional filters. Sold products excluded by default."""
     db = get_database()
 
     query = {}
+    if not include_sold:
+        query["status"] = {"$ne": "sold"}
     
     if sustainable is not None:
         query["sustainable"] = sustainable
@@ -240,11 +217,13 @@ async def create_product_with_image(
     sustainable: bool = Form(default=False, description="Whether the product is sustainable"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a product with an uploaded image. Verified users only."""
+    """Create a product with an uploaded image. Verified users only. Image is compressed and thumbnail generated."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    image_url, _ = await save_upload_file(file)
+    result = await process_and_save_image(file)
+    image_url = result["image_url"]
+    thumb_url = result.get("thumb_url")
 
     now = datetime.utcnow()
     doc = {
@@ -256,6 +235,7 @@ async def create_product_with_image(
         "condition": condition,
         "sustainable": sustainable,
         "images": [image_url],
+        "thumb_url": thumb_url,
         "status": "available",
         "views": 0,
         "created_at": now,
@@ -279,19 +259,20 @@ async def create_product_with_ai(
     sustainable: bool = Form(default=False, description="Whether the product is sustainable"),
     current_user: dict = Depends(get_current_user)
 ):
-    """AI-powered product creation: upload an image, AI generates title/description/category."""
+    """AI-powered product creation: upload an image, AI generates title/description/category. Image is compressed."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    image_url, file_content = await save_upload_file(file)
+    content = await file.read()
+    result = process_image_bytes(content, file.filename or "image.jpg")
+    image_url = result["image_url"]
+    thumb_url = result.get("thumb_url")
+    file_content = result["content"]
 
     ai_result = await analyze_image(file_content)
-    
+
     if not ai_result["success"]:
-        try:
-            os.remove(UPLOAD_DIR / image_url.split("/")[-1])
-        except:
-            pass
+        delete_image(image_url)
         raise HTTPException(
             status_code=500,
             detail=f"AI analysis failed: {ai_result.get('error', 'Unknown error')}"
@@ -309,6 +290,7 @@ async def create_product_with_ai(
         "condition": condition,
         "sustainable": sustainable,
         "images": [image_url],
+        "thumb_url": thumb_url,
         "keywords": ai_data.get("keywords", []),
         "status": "available",
         "views": 0,
@@ -371,11 +353,11 @@ async def preview_ai_analysis(
 
 @router.put("/{id}", response_model=ProductResponse)
 async def update_product(
-    id: str, 
-    payload: ProductCreate, 
+    id: str,
+    payload: ProductCreate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update a product. Only the owner can modify it."""
+    """Update a product. Editing automatically puts sold items back on sale."""
     db = get_database()
 
     try:
@@ -393,9 +375,10 @@ async def update_product(
         raise HTTPException(status_code=403, detail="You can only update your own products")
 
     now = datetime.utcnow()
+    update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.AVAILABLE.value}
     await db.products.update_one(
         {"_id": pid},
-        {"$set": {**payload.model_dump(), "updated_at": now}}
+        {"$set": update_data}
     )
 
     updated = await db.products.find_one({"_id": pid})
@@ -429,11 +412,7 @@ async def delete_product(
         raise HTTPException(status_code=403, detail="You can only delete your own products")
 
     for image_url in existing.get("images", []):
-        try:
-            filename = image_url.split("/")[-1]
-            os.remove(UPLOAD_DIR / filename)
-        except:
-            pass
+        delete_image(image_url)
 
     await db.products.delete_one({"_id": pid})
     return {"ok": True, "message": "Product deleted successfully"}

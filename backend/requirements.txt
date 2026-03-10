@@ -10,3 +10,4 @@ pymongo>=4.0
 passlib[bcrypt]>=1.7
 python-jose[cryptography]>=3.3
 openai>=1.0
+Pillow>=10.0

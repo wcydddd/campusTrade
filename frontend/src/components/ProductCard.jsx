@@ -14,7 +14,7 @@ const CATEGORY_DISPLAY = {
   Stationery: "Other",
 };
 
-function ProductCard({ product }) {
+function ProductCard({ product, onUnfavorited }) {
   const navigate = useNavigate();
   const [fav, setFav] = useState(!!product.is_favorited);
 
@@ -37,7 +37,11 @@ function ProductCard({ product }) {
       const res = await authFetch(`${API_BASE}/favorites/${product.id}`, {
         method: prev ? "DELETE" : "POST",
       });
-      if (!res.ok) setFav(prev);
+      if (!res.ok) {
+        setFav(prev);
+      } else if (prev && onUnfavorited) {
+        onUnfavorited(product.id);
+      }
     } catch {
       setFav(prev);
     }

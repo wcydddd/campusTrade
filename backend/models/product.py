@@ -23,6 +23,8 @@ class ProductCategory(str, Enum):
     FURNITURE = "Furniture"
     CLOTHING = "Clothing"
     SPORTS = "Sports"
+    KITCHEN = "Kitchen"
+    STATIONERY = "Stationery"
     OTHER = "Other"
 
 class ProductStatus(str, Enum):
@@ -69,6 +71,7 @@ class ProductResponse(BaseModel):
     views: int
     created_at: datetime
     updated_at: datetime
+    thumb_url: Optional[str] = None
 
     class Config:
         from_attributes = True

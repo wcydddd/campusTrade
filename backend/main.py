@@ -12,6 +12,8 @@ from routes.products import router as products_router
 from routes.messages import router as messages_router
 from routes.ws import router as ws_router
 from routes.notifications import router as notifications_router
+from routes.orders import router as orders_router
+from routes.favorites import router as favorites_router
 
 app = FastAPI(
     title="CampusTrade API",
@@ -49,6 +51,8 @@ app.include_router(ai_router)
 app.include_router(messages_router)
 app.include_router(ws_router)
 app.include_router(notifications_router)
+app.include_router(orders_router)
+app.include_router(favorites_router)
 
 # 启动时连接数据库 + 建立索引
 @app.on_event("startup")
@@ -69,6 +73,24 @@ async def startup_event():
     # 用户索引（防止并发重复注册）
     await db.users.create_index("email", unique=True)
     await db.users.create_index("username", unique=True)
+
+    # 收藏：防止同一用户重复收藏同一商品
+    await db.favorites.create_index([("user_id", 1), ("product_id", 1)], unique=True)
+
+    # 订单索引
+    await db.orders.create_index("buyer_id")
+    await db.orders.create_index("seller_id")
+    await db.orders.create_index([("product_id", 1), ("status", 1)])
+
+    # products 索引（搜索与查询优化）
+    await db.products.create_index("created_at")
+    await db.products.create_index("seller_id")
+    await db.products.create_index("category")
+    await db.products.create_index("sustainable")
+    await db.products.create_index([("status", 1), ("created_at", -1)])
+
+    # AI 使用配额：按用户+日期快速查询
+    await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
 
 
 # 关闭时断开连接
