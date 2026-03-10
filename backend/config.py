@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017/campustrade"
     
     # JWT
-    jwt_secret: str = "super-secret-key-123456"
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 10080
     

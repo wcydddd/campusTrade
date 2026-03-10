@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
-from models.user import UserCreate, UserLogin, UserResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
+from models.user import UserCreate, UserLogin, UserResponse, TokenResponse
 from utils.security import (
     hash_password,
     verify_password,
@@ -233,6 +233,17 @@ async def verify_email(req: VerifyCodeRequest):
 @router.post("/login", response_model=TokenResponse)
 async def login(user_data: UserLogin):
     """用户登录（方案A：必须完成邮箱验证才允许登录）"""
+    try:
+        return await _do_login(user_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
+
+
+async def _do_login(user_data: UserLogin):
     db = get_database()
     email = user_data.email.lower()
 
@@ -245,19 +256,19 @@ async def login(user_data: UserLogin):
     if user.get("is_verified") is False:
         raise HTTPException(status_code=403, detail="Email not verified. Please verify your email first.")
 
-    # 2b) 封禁用户禁止登录
-    if user.get("banned"):
-        raise HTTPException(status_code=403, detail="Account is banned.")
+    # 3) 封禁用户：禁止登录
+    if user.get("is_banned", False):
+        raise HTTPException(status_code=403, detail="Account is banned. Please contact admin.")
 
-    # 3) 验证密码
+    # 4) 验证密码
     if not verify_password(user_data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # 4) 生成 token
+    # 5) 生成 token
     user_id = str(user["_id"])
     access_token = create_access_token(data={"sub": user_id, "email": user["email"]})
 
-    # 5) 返回 token + user
+    # 6) 返回 token + user
     user_response = UserResponse(
         id=user_id,
         email=user["email"],
@@ -265,7 +276,6 @@ async def login(user_data: UserLogin):
         role=user["role"],
         is_verified=user["is_verified"],
         avatar_url=user.get("avatar_url"),
-        bio=user.get("bio"),
         created_at=user["created_at"]
     )
 
@@ -291,112 +301,5 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         role=user["role"],
         is_verified=user["is_verified"],
         avatar_url=user.get("avatar_url"),
-        bio=user.get("bio"),
         created_at=user["created_at"]
     )
-
-
-# =====================================================
-# PATCH /auth/me - 更新个人资料（昵称、简介）
-# =====================================================
-@router.patch("/me", response_model=UserResponse)
-async def update_me(
-    payload: ProfileUpdate,
-    current_user: dict = Depends(get_current_user),
-):
-    db = get_database()
-    uid = ObjectId(current_user["user_id"])
-    update_data = payload.model_dump(exclude_unset=True)
-    if not update_data:
-        user = await db.users.find_one({"_id": uid})
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return UserResponse(
-            id=str(user["_id"]),
-            email=user["email"],
-            username=user["username"],
-            role=user["role"],
-            is_verified=user["is_verified"],
-            avatar_url=user.get("avatar_url"),
-            bio=user.get("bio"),
-            created_at=user["created_at"]
-        )
-    if "username" in update_data:
-        existing = await db.users.find_one({"username": update_data["username"], "_id": {"$ne": uid}})
-        if existing:
-            raise HTTPException(status_code=400, detail="Username already taken")
-    await db.users.update_one({"_id": uid}, {"$set": update_data})
-    user = await db.users.find_one({"_id": uid})
-    return UserResponse(
-        id=str(user["_id"]),
-        email=user["email"],
-        username=user["username"],
-        role=user["role"],
-        is_verified=user["is_verified"],
-        avatar_url=user.get("avatar_url"),
-        bio=user.get("bio"),
-        created_at=user["created_at"]
-    )
-
-
-# =====================================================
-# POST /auth/me/avatar - 上传头像
-# =====================================================
-@router.post("/me/avatar", response_model=UserResponse)
-async def upload_avatar(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
-):
-    import uuid
-    from pathlib import Path
-    from config import settings
-
-    ext = (file.filename or "").split(".")[-1].lower()
-    if ext not in ("jpg", "jpeg", "png", "webp"):
-        raise HTTPException(status_code=400, detail="Allowed: jpg, png, webp")
-    content = await file.read()
-    if len(content) > (settings.max_upload_size_mb * 1024 * 1024):
-        raise HTTPException(status_code=400, detail=f"Max size {settings.max_upload_size_mb}MB")
-    upload_dir = Path(settings.upload_dir)
-    upload_dir.mkdir(exist_ok=True)
-    name = f"{uuid.uuid4()}.{ext}"
-    path = upload_dir / name
-    with open(path, "wb") as f:
-        f.write(content)
-    avatar_url = f"/uploads/{name}"
-    db = get_database()
-    uid = ObjectId(current_user["user_id"])
-    await db.users.update_one({"_id": uid}, {"$set": {"avatar_url": avatar_url}})
-    user = await db.users.find_one({"_id": uid})
-    return UserResponse(
-        id=str(user["_id"]),
-        email=user["email"],
-        username=user["username"],
-        role=user["role"],
-        is_verified=user["is_verified"],
-        avatar_url=user.get("avatar_url"),
-        bio=user.get("bio"),
-        created_at=user["created_at"]
-    )
-
-
-# =====================================================
-# POST /auth/change-password - 修改密码
-# =====================================================
-@router.post("/change-password", status_code=status.HTTP_200_OK)
-async def change_password(
-    payload: ChangePasswordRequest,
-    current_user: dict = Depends(get_current_user),
-):
-    db = get_database()
-    uid = ObjectId(current_user["user_id"])
-    user = await db.users.find_one({"_id": uid})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if not verify_password(payload.old_password, user["hashed_password"]):
-        raise HTTPException(status_code=400, detail="Current password is wrong")
-    await db.users.update_one(
-        {"_id": uid},
-        {"$set": {"hashed_password": hash_password(payload.new_password)}},
-    )
-    return {"message": "Password updated"}

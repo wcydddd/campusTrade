@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from datetime import datetime
 from bson import ObjectId
-from typing import List
+from typing import Optional, List
 
 from utils.database import get_database
-from models.message import MessageCreate, MessageResponse, ConversationResponse
+from models.message import MessageCreate, MessageResponse
+from models.conversation import ConversationResponse
 from utils.permission import require_verified_user
 
-router = APIRouter(prefix="/messages", tags=["Messages"])
+router = APIRouter(tags=["Messages & Conversations"])
 
 
 def _oid(id_str: str) -> ObjectId:
@@ -16,31 +17,188 @@ def _oid(id_str: str) -> ObjectId:
     return ObjectId(id_str)
 
 
-def _to_response(doc: dict) -> MessageResponse:
+def _msg_response(doc: dict) -> MessageResponse:
     return MessageResponse(
         id=str(doc["_id"]),
+        conversation_id=str(doc["conversation_id"]) if doc.get("conversation_id") else None,
         from_user_id=str(doc["from_user_id"]),
         to_user_id=str(doc["to_user_id"]),
         content=doc["content"],
         product_id=str(doc["product_id"]) if doc.get("product_id") else None,
-        read=doc.get("read", False),
+        read_at=doc.get("read_at"),
         created_at=doc["created_at"],
     )
 
 
-# =====================================================
-# GET /messages — message list (with optional filters)
-# =====================================================
+def _conv_response(doc: dict, unread: int = 0) -> ConversationResponse:
+    return ConversationResponse(
+        id=str(doc["_id"]),
+        participants=[str(p) for p in doc["participants"]],
+        product_id=str(doc["product_id"]) if doc.get("product_id") else None,
+        last_message=doc.get("last_message"),
+        last_message_at=doc.get("last_message_at"),
+        unread_count=unread,
+        created_at=doc["created_at"],
+        updated_at=doc["updated_at"],
+    )
 
-@router.get("", response_model=List[MessageResponse])
+
+async def _get_or_create_conversation(db, user1_oid, user2_oid, product_oid=None):
+    """Find existing conversation between two users (optionally about a product), or create one."""
+    query = {
+        "participants": {"$all": [user1_oid, user2_oid]},
+    }
+    if product_oid:
+        query["product_id"] = product_oid
+
+    conv = await db.conversations.find_one(query)
+    if conv:
+        return conv
+
+    now = datetime.utcnow()
+    doc = {
+        "participants": [user1_oid, user2_oid],
+        "product_id": product_oid,
+        "last_message": None,
+        "last_message_at": now,
+        "created_at": now,
+        "updated_at": now,
+    }
+    res = await db.conversations.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return doc
+
+
+# =====================================================
+# GET /conversations - 获取当前用户的所有会话
+# =====================================================
+@router.get("/conversations", response_model=List[ConversationResponse])
+async def get_conversations(
+    current_user: dict = Depends(require_verified_user),
+):
+    db = get_database()
+    uid = _oid(current_user["user_id"])
+
+    convs = await db.conversations.find(
+        {"participants": uid}
+    ).sort("last_message_at", -1).to_list(length=100)
+
+    results = []
+    for conv in convs:
+        unread = await db.messages.count_documents({
+            "conversation_id": conv["_id"],
+            "to_user_id": uid,
+            "read_at": None,
+        })
+        results.append(_conv_response(conv, unread))
+    return results
+
+
+# =====================================================
+# GET /conversations/{id}/messages - 获取某会话的消息（分页）
+# =====================================================
+@router.get("/conversations/{conv_id}/messages", response_model=List[MessageResponse])
+async def get_conversation_messages(
+    conv_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(require_verified_user),
+):
+    db = get_database()
+    uid = _oid(current_user["user_id"])
+    cid = _oid(conv_id)
+
+    conv = await db.conversations.find_one({"_id": cid})
+    if not conv or uid not in conv["participants"]:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    skip = (page - 1) * page_size
+    docs = await db.messages.find(
+        {"conversation_id": cid}
+    ).sort("created_at", -1).skip(skip).limit(page_size).to_list(length=page_size)
+
+    return [_msg_response(d) for d in docs]
+
+
+# =====================================================
+# POST /messages - 发送消息（自动创建/复用会话）
+# =====================================================
+@router.post("/messages", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+async def send_message(
+    payload: MessageCreate,
+    current_user: dict = Depends(require_verified_user),
+):
+    db = get_database()
+    from_oid = _oid(current_user["user_id"])
+    to_oid = _oid(payload.to_user_id)
+
+    if from_oid == to_oid:
+        raise HTTPException(status_code=400, detail="Cannot send message to yourself")
+
+    receiver = await db.users.find_one({"_id": to_oid})
+    if not receiver:
+        raise HTTPException(status_code=404, detail="Receiver not found")
+
+    product_oid = _oid(payload.product_id) if payload.product_id else None
+    conv = await _get_or_create_conversation(db, from_oid, to_oid, product_oid)
+
+    now = datetime.utcnow()
+    doc = {
+        "conversation_id": conv["_id"],
+        "from_user_id": from_oid,
+        "to_user_id": to_oid,
+        "content": payload.content,
+        "product_id": product_oid,
+        "read_at": None,
+        "created_at": now,
+    }
+    res = await db.messages.insert_one(doc)
+    doc["_id"] = res.inserted_id
+
+    # Update conversation summary
+    await db.conversations.update_one(
+        {"_id": conv["_id"]},
+        {"$set": {
+            "last_message": payload.content[:100],
+            "last_message_at": now,
+            "updated_at": now,
+        }}
+    )
+
+    # Create notification for receiver
+    await db.notifications.insert_one({
+        "user_id": to_oid,
+        "type": "new_message",
+        "title": "New message",
+        "body": payload.content[:100],
+        "related_id": str(conv["_id"]),
+        "is_read": False,
+        "created_at": now,
+    })
+
+    # Push to WebSocket if recipient is online
+    from routes.ws import manager
+    ws_payload = {
+        "type": "new_message",
+        "conversation_id": str(conv["_id"]),
+        "message": _msg_response(doc).model_dump(mode="json"),
+    }
+    await manager.send_to_user(str(to_oid), ws_payload)
+
+    return _msg_response(doc)
+
+
+# =====================================================
+# GET /messages - 兼容旧接口（按 other_user_id 拉消息）
+# =====================================================
+@router.get("/messages", response_model=List[MessageResponse])
 async def get_messages(
-    other_user_id: str | None = Query(None),
-    product_id: str | None = Query(None),
+    other_user_id: Optional[str] = Query(None),
+    product_id: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
     current_user: dict = Depends(require_verified_user),
 ):
-    """Get messages for the current user, optionally filtered by conversation partner or product."""
     db = get_database()
     uid = _oid(current_user["user_id"])
 
@@ -58,260 +216,62 @@ async def get_messages(
     if product_id:
         query["product_id"] = _oid(product_id)
 
-    cursor = (
-        db.messages.find(query)
-        .sort("created_at", -1)
-        .skip(skip)
-        .limit(limit)
-    )
-    docs = await cursor.to_list(length=limit)
-    return [_to_response(d) for d in docs]
+    docs = await db.messages.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    return [_msg_response(d) for d in docs]
 
 
 # =====================================================
-# POST /messages — send a message (REST fallback)
+# POST /messages/{id}/read - 标记单条消息已读
 # =====================================================
-
-@router.post("", response_model=MessageResponse, status_code=status.HTTP_200_OK)
-async def send_message(
-    payload: MessageCreate,
+@router.post("/messages/{msg_id}/read")
+async def mark_message_read(
+    msg_id: str,
     current_user: dict = Depends(require_verified_user),
 ):
-    """Send a message via REST (the WebSocket path is preferred for real-time)."""
     db = get_database()
+    uid = _oid(current_user["user_id"])
+    mid = _oid(msg_id)
 
-    from_oid = _oid(current_user["user_id"])
-    to_oid = _oid(payload.to_user_id)
+    msg = await db.messages.find_one({"_id": mid})
+    if not msg or msg["to_user_id"] != uid:
+        raise HTTPException(status_code=404, detail="Message not found")
 
-    if from_oid == to_oid:
-        raise HTTPException(status_code=400, detail="Cannot send message to yourself")
+    if msg.get("read_at") is None:
+        now = datetime.utcnow()
+        await db.messages.update_one({"_id": mid}, {"$set": {"read_at": now}})
 
-    receiver = await db.users.find_one({"_id": to_oid})
-    if not receiver:
-        raise HTTPException(status_code=404, detail="Receiver not found")
-
-    doc = {
-        "from_user_id": from_oid,
-        "to_user_id": to_oid,
-        "content": payload.content,
-        "product_id": _oid(payload.product_id) if payload.product_id else None,
-        "read": False,
-        "created_at": datetime.utcnow(),
-    }
-
-    res = await db.messages.insert_one(doc)
-    doc["_id"] = res.inserted_id
-
-    # Push notification + unread_update (same as WebSocket path)
-    try:
-        from routes.notifications import create_notification
+        # Notify sender via WebSocket
         from routes.ws import manager
-
-        sender = await db.users.find_one({"_id": from_oid})
-        sender_name = sender.get("username", "Someone") if sender else "Someone"
-        notif_link = f"/chat/{current_user['user_id']}"
-        if payload.product_id:
-            notif_link += f"?product={payload.product_id}"
-        await create_notification(
-            user_id=payload.to_user_id,
-            ntype="new_order",
-            title="New message",
-            body=f"{sender_name}: {payload.content[:80]}",
-            link=notif_link,
-        )
-
-        unread = await db.messages.count_documents({
-            "to_user_id": to_oid,
-            "$or": [{"read": {"$exists": False}}, {"read": False}],
+        await manager.send_to_user(str(msg["from_user_id"]), {
+            "type": "message_read",
+            "message_id": str(mid),
+            "conversation_id": str(msg["conversation_id"]),
+            "read_at": now.isoformat(),
         })
-        await manager.send_personal(payload.to_user_id, {
-            "type": "unread_update",
-            "unread_count": unread,
-        })
-        await manager.send_personal(payload.to_user_id, {
-            "type": "chat",
-            "message_id": str(res.inserted_id),
-            "from": current_user["user_id"],
-            "to": payload.to_user_id,
-            "content": payload.content,
-            "product_id": payload.product_id,
-            "created_at": doc["created_at"].isoformat(),
-        })
-    except Exception:
-        pass
 
-    return _to_response(doc)
+    return {"ok": True}
 
 
 # =====================================================
-# GET /messages/conversations — aggregated conversation list
+# POST /conversations/{id}/read_all - 标记会话所有消息已读
 # =====================================================
-
-@router.get("/conversations", response_model=List[ConversationResponse])
-async def list_conversations(
-    current_user: dict = Depends(require_verified_user),
-):
-    """
-    Return one row per conversation partner, sorted by latest message time.
-    Each row includes the partner's username, last message preview, and how
-    many messages from them are still unread.
-    """
-    db = get_database()
-    uid = _oid(current_user["user_id"])
-
-    pipeline = [
-        {"$match": {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}},
-        {
-            "$addFields": {
-                "other_user_id": {
-                    "$cond": [
-                        {"$eq": ["$from_user_id", uid]},
-                        "$to_user_id",
-                        "$from_user_id",
-                    ]
-                },
-                "is_incoming_unread": {
-                    "$and": [
-                        {"$eq": ["$to_user_id", uid]},
-                        {"$ne": [{"$ifNull": ["$read", False]}, True]},
-                    ]
-                },
-            }
-        },
-        {"$sort": {"created_at": -1}},
-        {
-            "$group": {
-                "_id": {
-                    "other_user_id": "$other_user_id",
-                    "product_id_key": {
-                        "$ifNull": [{"$toString": "$product_id"}, "general"],
-                    },
-                },
-                "last_message": {"$first": "$content"},
-                "last_time": {"$first": "$created_at"},
-                "last_product_id": {"$first": "$product_id"},
-                "unread_count": {"$sum": {"$cond": ["$is_incoming_unread", 1, 0]}},
-            }
-        },
-        {"$sort": {"last_time": -1}},
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "_id.other_user_id",
-                "foreignField": "_id",
-                "as": "user_info",
-            }
-        },
-        {
-            "$lookup": {
-                "from": "products",
-                "localField": "last_product_id",
-                "foreignField": "_id",
-                "as": "product_info",
-            }
-        },
-        {
-            "$addFields": {
-                "other_username": {
-                    "$ifNull": [
-                        {"$arrayElemAt": ["$user_info.username", 0]},
-                        "Unknown",
-                    ]
-                },
-                "product_title": {"$arrayElemAt": ["$product_info.title", 0]},
-                "product_image": {
-                    "$ifNull": [
-                        {"$arrayElemAt": ["$product_info.image_url", 0]},
-                        {"$arrayElemAt": [
-                            {"$arrayElemAt": ["$product_info.images", 0]},
-                            0,
-                        ]},
-                    ]
-                },
-            }
-        },
-        {"$project": {"user_info": 0, "product_info": 0}},
-    ]
-
-    docs = await db.messages.aggregate(pipeline).to_list(length=200)
-
-    return [
-        ConversationResponse(
-            other_user_id=str(d["_id"]["other_user_id"]),
-            other_username=d["other_username"],
-            last_message=d["last_message"],
-            last_time=d["last_time"],
-            unread_count=d["unread_count"],
-            product_id=str(d["last_product_id"]) if d.get("last_product_id") else None,
-            product_title=d.get("product_title"),
-            product_image=d.get("product_image"),
-        )
-        for d in docs
-    ]
-
-
-# =====================================================
-# GET /messages/unread-count — total unread for badge
-# =====================================================
-
-@router.get("/unread-count")
-async def get_unread_count(
-    current_user: dict = Depends(require_verified_user),
-):
-    """Return the total number of unread messages for the current user."""
-    db = get_database()
-    uid = _oid(current_user["user_id"])
-    count = await db.messages.count_documents({
-        "to_user_id": uid,
-        "$or": [{"read": {"$exists": False}}, {"read": False}],
-    })
-    return {"unread_count": count}
-
-
-# =====================================================
-# POST /messages/conversations/{other_user_id}/read
-# =====================================================
-
-@router.post("/conversations/{other_user_id}/read")
+@router.post("/conversations/{conv_id}/read_all")
 async def mark_conversation_read(
-    other_user_id: str,
-    product_id: str | None = Query(None),
+    conv_id: str,
     current_user: dict = Depends(require_verified_user),
 ):
-    """Mark messages FROM other_user TO current_user as read (optionally only for one product)."""
     db = get_database()
     uid = _oid(current_user["user_id"])
-    other_oid = _oid(other_user_id)
+    cid = _oid(conv_id)
 
-    filter_query = {
-        "from_user_id": other_oid,
-        "to_user_id": uid,
-        "$or": [{"read": {"$exists": False}}, {"read": False}],
-    }
-    if product_id:
-        filter_query["product_id"] = _oid(product_id)
+    conv = await db.conversations.find_one({"_id": cid})
+    if not conv or uid not in conv["participants"]:
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
+    now = datetime.utcnow()
     result = await db.messages.update_many(
-        filter_query,
-        {"$set": {"read": True}},
+        {"conversation_id": cid, "to_user_id": uid, "read_at": None},
+        {"$set": {"read_at": now}},
     )
 
-    remaining = await db.messages.count_documents({
-        "to_user_id": uid,
-        "$or": [{"read": {"$exists": False}}, {"read": False}],
-    })
-
-    try:
-        from routes.ws import manager
-        await manager.send_personal(str(other_user_id), {
-            "type": "messages_read",
-            "reader_id": str(current_user["user_id"]),
-            "product_id": str(product_id) if product_id else None,
-        })
-    except Exception:
-        pass
-
-    return {
-        "marked": result.modified_count,
-        "total_unread": remaining,
-    }
+    return {"ok": True, "marked_count": result.modified_count}

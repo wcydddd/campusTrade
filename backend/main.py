@@ -6,12 +6,14 @@ import os
 
 from utils.database import connect_to_mongo, close_mongo_connection, get_database
 from routes.auth import router as auth_router
-from routes.admin import router as admin_router
 from routes.ai import router as ai_router
 from routes.products import router as products_router
 from routes.messages import router as messages_router
-from routes.ws import router as ws_router
 from routes.notifications import router as notifications_router
+from routes.ws import router as ws_router
+from routes.orders import router as orders_router
+from routes.favorites import router as favorites_router
+from routes.admin import router as admin_router
 
 app = FastAPI(
     title="CampusTrade API",
@@ -25,17 +27,10 @@ app = FastAPI(
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# CORS 配置（开发环境放宽 Origin，方便本地调试）
+# CORS 配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:3000",
-    ],
-    allow_origin_regex=".*",  # 本地开发放开所有来源，避免预检请求失败
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,12 +38,14 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth_router)
-app.include_router(admin_router)
 app.include_router(products_router)
 app.include_router(ai_router)
 app.include_router(messages_router)
-app.include_router(ws_router)
 app.include_router(notifications_router)
+app.include_router(ws_router)
+app.include_router(orders_router)
+app.include_router(favorites_router)
+app.include_router(admin_router)
 
 # 启动时连接数据库 + 建立索引
 @app.on_event("startup")
@@ -69,6 +66,31 @@ async def startup_event():
     # 用户索引（防止并发重复注册）
     await db.users.create_index("email", unique=True)
     await db.users.create_index("username", unique=True)
+
+    # 收藏：防止同一用户重复收藏同一商品
+    await db.favorites.create_index([("user_id", 1), ("product_id", 1)], unique=True)
+
+    # 会话索引
+    await db.conversations.create_index("participants")
+    await db.conversations.create_index("last_message_at")
+
+    # 消息索引
+    await db.messages.create_index("conversation_id")
+    await db.messages.create_index([("to_user_id", 1), ("read_at", 1)])
+
+    # 通知索引
+    await db.notifications.create_index([("user_id", 1), ("is_read", 1), ("created_at", -1)])
+
+    # AI 使用配额：按用户+日期快速查询
+    await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
+
+    # products 索引（B3：搜索与查询优化）
+    await db.products.create_index([("title", "text"), ("description", "text")])
+    await db.products.create_index("created_at")
+    await db.products.create_index("seller_id")
+    await db.products.create_index("category")
+    await db.products.create_index("sustainable")
+    await db.products.create_index([("status", 1), ("created_at", -1)])
 
 
 # 关闭时断开连接
@@ -97,7 +119,7 @@ def health_check():
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
         reload=True
     )

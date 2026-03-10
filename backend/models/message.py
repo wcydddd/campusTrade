@@ -40,21 +40,10 @@ class MessageInDB(BaseModel):
 
 class MessageResponse(BaseModel):
     id: str
+    conversation_id: Optional[str] = None
     from_user_id: str
     to_user_id: str
     content: str
     product_id: Optional[str] = None
-    read: bool = False
+    read_at: Optional[datetime] = None
     created_at: datetime
-
-
-class ConversationResponse(BaseModel):
-    """One entry per conversation partner."""
-    other_user_id: str
-    other_username: str
-    last_message: str
-    last_time: datetime
-    unread_count: int
-    product_id: Optional[str] = None
-    product_title: Optional[str] = None
-    product_image: Optional[str] = None

@@ -10,7 +10,7 @@ class PyObjectId(ObjectId):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, info=None):
+    def validate(cls, v, info=None):  # 更新
         if isinstance(v, ObjectId):
             return v
         if not ObjectId.is_valid(v):
@@ -18,12 +18,12 @@ class PyObjectId(ObjectId):
         return ObjectId(v)
 
 class ProductCategory(str, Enum):
-    TEXTBOOKS = "Textbooks"
-    ELECTRONICS = "Electronics"
-    FURNITURE = "Furniture"
-    CLOTHING = "Clothing"
-    SPORTS = "Sports"
-    OTHER = "Other"
+    TEXTBOOKS = "教材"
+    ELECTRONICS = "电子产品"
+    FURNITURE = "家具"
+    CLOTHING = "服饰"
+    SPORTS = "运动器材"
+    OTHER = "其他"
 
 class ProductStatus(str, Enum):
     AVAILABLE = "available"
@@ -35,8 +35,8 @@ class ProductBase(BaseModel):
     description: str
     price: float
     category: ProductCategory
-    condition: str
-    sustainable: bool = False
+    condition: str  # "全新", "9成新", "7成新" etc.
+    sustainable: bool = False  # 可循环这一块
     images: List[str] = []
 
 class ProductCreate(ProductBase):
@@ -68,7 +68,7 @@ class ProductResponse(BaseModel):
     status: str
     views: int
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime  # 更新
 
     class Config:
         from_attributes = True
