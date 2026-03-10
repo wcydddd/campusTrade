@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from bson import ObjectId
 from pydantic import BaseModel
@@ -174,7 +174,7 @@ async def create_notification(
     ntype: str,
     title: str,
     body: str,
-    link: str | None = None,
+    link: Optional[str] = None,
 ):
     """
     Insert a notification into the DB and push it to the user via WebSocket

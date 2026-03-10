@@ -1,7 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from datetime import datetime
 from bson import ObjectId
-from typing import Dict
+from typing import Dict, Optional
 import json
 import logging
 
@@ -53,7 +53,7 @@ class ConnectionManager:
             self.disconnect(user_id)
             return False
 
-    async def broadcast(self, data: dict, *, exclude: str | None = None):
+    async def broadcast(self, data: dict, *, exclude: Optional[str] = None):
         """Send to every connected user (optionally excluding one)."""
         dead = []
         for uid, ws in self.active.items():
@@ -88,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    user_id: str | None = payload.get("sub")
+    user_id: Optional[str] = payload.get("sub")
     if not user_id:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return

@@ -138,6 +138,26 @@ async def list_product_categories():
 
 
 # =====================================================
+# GET /products/trending - Trending products (most viewed)
+# =====================================================
+
+@router.get("/trending", response_model=List[ProductResponse])
+async def list_trending(
+    limit: int = Query(12, ge=1, le=50, description="Max number of trending products"),
+):
+    """Get trending products sorted by view count. Public access."""
+    db = get_database()
+    docs = (
+        await db.products
+        .find({"status": "available"})
+        .sort("views", -1)
+        .limit(limit)
+        .to_list(length=limit)
+    )
+    return [_to_response(d) for d in docs]
+
+
+# =====================================================
 # GET /products/user/me - Current user's products (auth required)
 # =====================================================
 

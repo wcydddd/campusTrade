@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from datetime import datetime
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 from utils.database import get_database
 from models.message import MessageCreate, MessageResponse, ConversationResponse
@@ -34,8 +34,8 @@ def _to_response(doc: dict) -> MessageResponse:
 
 @router.get("", response_model=List[MessageResponse])
 async def get_messages(
-    other_user_id: str | None = Query(None),
-    product_id: str | None = Query(None),
+    other_user_id: Optional[str] = Query(None),
+    product_id: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
     current_user: dict = Depends(require_verified_user),
@@ -275,7 +275,7 @@ async def get_unread_count(
 @router.post("/conversations/{other_user_id}/read")
 async def mark_conversation_read(
     other_user_id: str,
-    product_id: str | None = Query(None),
+    product_id: Optional[str] = Query(None),
     current_user: dict = Depends(require_verified_user),
 ):
     """Mark messages FROM other_user TO current_user as read (optionally only for one product)."""
