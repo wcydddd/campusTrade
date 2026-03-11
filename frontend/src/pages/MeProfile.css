@@ -1,0 +1,217 @@
+.me-profile {
+  min-height: 100vh;
+  padding: 24px;
+  background: #f4f6f8;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.me-profile-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.me-profile-card h1 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  color: #1a1a1a;
+}
+
+.me-profile-hint {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+.me-profile-dl {
+  margin: 0 0 20px;
+}
+
+.me-profile-dl dt {
+  font-size: 12px;
+  color: #666;
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+
+.me-profile-dl dd {
+  margin: 0;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.me-profile-error {
+  color: #c00;
+  margin-bottom: 12px;
+}
+
+.me-profile-back {
+  color: #4f46e5;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.me-profile-back:hover {
+  text-decoration: underline;
+}
+
+.me-profile-section {
+  margin-bottom: 20px;
+}
+
+.me-profile-section h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.me-profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.me-profile-avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.me-profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.me-profile-file-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.me-profile-file-input {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.me-profile-file-btn {
+  padding: 8px 14px;
+  border: 1px solid #4f46e5;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.me-profile-file-btn:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+.me-profile-file-name {
+  font-size: 13px;
+  color: #666;
+}
+
+.me-profile-avatar-form button,
+.me-profile-section form button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.me-profile-avatar-form button:disabled,
+.me-profile-section form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.me-profile-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.me-profile-bio {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.me-profile-success {
+  color: #059669;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.me-profile-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.me-profile-actions button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.me-profile-links {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.me-profile-link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.me-profile-logout {
+  padding: 8px 0;
+  border: none;
+  background: none;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+}
+
+.me-profile-logout:hover {
+  text-decoration: underline;
+}
