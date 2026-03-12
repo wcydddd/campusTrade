@@ -75,6 +75,7 @@ class ProductResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     thumb_url: Optional[str] = None
+    is_favorited: Optional[bool] = None
 
     class Config:
         from_attributes = True

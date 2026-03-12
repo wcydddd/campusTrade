@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from utils.database import get_database
-from utils.security import get_current_user
+from utils.security import get_current_user, get_optional_user
 from utils.ai_helper import analyze_image, get_categories
 from utils.image_service import process_and_save_image, process_image_bytes, delete_image
 from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
@@ -23,7 +23,7 @@ MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024
 # Utility functions
 # =====================================================
 
-def _to_response(doc: dict) -> ProductResponse:
+def _to_response(doc: dict, is_favorited: bool = None) -> ProductResponse:
     """Convert a MongoDB document to a response model."""
     return ProductResponse(
         id=str(doc["_id"]),
@@ -40,6 +40,7 @@ def _to_response(doc: dict) -> ProductResponse:
         created_at=doc.get("created_at"),
         updated_at=doc.get("updated_at"),
         thumb_url=doc.get("thumb_url"),
+        is_favorited=is_favorited,
     )
 
 
@@ -73,6 +74,7 @@ async def list_products(
     max_price: Optional[float] = Query(default=None, description="Maximum price"),
     search: Optional[str] = Query(default=None, description="Search in title/description"),
     include_sold: bool = Query(default=False, description="Include sold products (default: exclude)"),
+    current_user: Optional[dict] = Depends(get_optional_user),
 ):
     """List products with optional filters. Sold products excluded by default."""
     db = get_database()
@@ -103,7 +105,21 @@ async def list_products(
         ]
 
     docs = await db.products.find(query).sort("created_at", -1).to_list(length=200)
-    return [_to_response(d) for d in docs]
+
+    fav_set = set()
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            product_ids = [d["_id"] for d in docs]
+            if product_ids:
+                fav_docs = await db.favorites.find(
+                    {"user_id": uid, "product_id": {"$in": product_ids}}
+                ).to_list(length=len(product_ids))
+                fav_set = {f["product_id"] for f in fav_docs}
+        except Exception:
+            pass
+
+    return [_to_response(d, is_favorited=(d["_id"] in fav_set)) for d in docs]
 
 
 # =====================================================
@@ -123,6 +139,7 @@ async def list_product_categories():
 @router.get("/trending", response_model=List[ProductResponse])
 async def list_trending(
     limit: int = Query(12, ge=1, le=50, description="Max number of trending products"),
+    current_user: Optional[dict] = Depends(get_optional_user),
 ):
     """Get trending products sorted by view count. Public access."""
     db = get_database()
@@ -133,7 +150,21 @@ async def list_trending(
         .limit(limit)
         .to_list(length=limit)
     )
-    return [_to_response(d) for d in docs]
+
+    fav_set = set()
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            product_ids = [d["_id"] for d in docs]
+            if product_ids:
+                fav_docs = await db.favorites.find(
+                    {"user_id": uid, "product_id": {"$in": product_ids}}
+                ).to_list(length=len(product_ids))
+                fav_set = {f["product_id"] for f in fav_docs}
+        except Exception:
+            pass
+
+    return [_to_response(d, is_favorited=(d["_id"] in fav_set)) for d in docs]
 
 
 # =====================================================
@@ -159,7 +190,10 @@ async def get_my_products(current_user: dict = Depends(get_current_user)):
 # =====================================================
 
 @router.get("/{id}", response_model=ProductResponse)
-async def get_product(id: str):
+async def get_product(
+    id: str,
+    current_user: Optional[dict] = Depends(get_optional_user),
+):
     """Get product detail and increment view count."""
     db = get_database()
 
@@ -177,7 +211,16 @@ async def get_product(id: str):
     await db.products.update_one({"_id": pid}, {"$inc": {"views": 1}})
     doc = await db.products.find_one({"_id": pid})
 
-    return _to_response(doc)
+    is_fav = False
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            fav = await db.favorites.find_one({"user_id": uid, "product_id": pid})
+            is_fav = fav is not None
+        except Exception:
+            pass
+
+    return _to_response(doc, is_favorited=is_fav)
 
 
 # =====================================================

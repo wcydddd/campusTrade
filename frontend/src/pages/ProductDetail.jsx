@@ -48,7 +48,7 @@ export default function ProductDetail() {
       setError("");
 
       try {
-        const res = await fetch(`${API_BASE}/products/${id}`);
+        const res = await authFetch(`${API_BASE}/products/${id}`);
         if (cancelled) return;
 
         if (!res.ok) {
