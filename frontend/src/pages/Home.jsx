@@ -311,11 +311,18 @@ function Home() {
                   </Link>
                 </li>
                 {currentUser?.role === "admin" && (
-                  <li>
-                    <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
-                      User management
-                    </Link>
-                  </li>
+                  <>
+                    <li>
+                      <Link to="/admin/review" onClick={() => setMeMenuOpen(false)}>
+                        Product review
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
+                        User management
+                      </Link>
+                    </li>
+                  </>
                 )}
               </ul>
             )}

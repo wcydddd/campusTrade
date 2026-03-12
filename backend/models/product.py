@@ -28,10 +28,12 @@ class ProductCategory(str, Enum):
     OTHER = "Other"
 
 class ProductStatus(str, Enum):
+    PENDING = "pending"
     AVAILABLE = "available"
     RESERVED = "reserved"
     SOLD = "sold"
     REMOVED = "removed"
+    REJECTED = "rejected"
 
 class ProductBase(BaseModel):
     title: str
@@ -48,7 +50,7 @@ class ProductCreate(ProductBase):
 class ProductInDB(ProductBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     seller_id: PyObjectId
-    status: ProductStatus = ProductStatus.AVAILABLE
+    status: ProductStatus = ProductStatus.PENDING
     views: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

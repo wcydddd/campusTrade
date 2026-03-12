@@ -77,9 +77,9 @@ async def list_products(
     """List products with optional filters. Sold products excluded by default."""
     db = get_database()
 
-    query = {"status": {"$ne": "removed"}}
+    query = {"status": {"$nin": ["removed", "pending", "rejected"]}}
     if not include_sold:
-        query["status"] = {"$nin": ["sold", "removed"]}
+        query["status"] = {"$nin": ["sold", "removed", "pending", "rejected"]}
     
     if sustainable is not None:
         query["sustainable"] = sustainable
@@ -240,7 +240,7 @@ async def create_product_with_image(
         "sustainable": sustainable,
         "images": [image_url],
         "thumb_url": thumb_url,
-        "status": "available",
+        "status": "pending",
         "views": 0,
         "created_at": now,
         "updated_at": now,
@@ -296,7 +296,7 @@ async def create_product_with_ai(
         "images": [image_url],
         "thumb_url": thumb_url,
         "keywords": ai_data.get("keywords", []),
-        "status": "available",
+        "status": "pending",
         "views": 0,
         "ai_generated": True,
         "created_at": now,
@@ -361,7 +361,7 @@ async def update_product(
     payload: ProductCreate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update a product. Editing automatically puts sold items back on sale."""
+    """Update a product. Edited products go back to pending review."""
     db = get_database()
 
     try:
@@ -379,7 +379,7 @@ async def update_product(
         raise HTTPException(status_code=403, detail="You can only update your own products")
 
     now = datetime.utcnow()
-    update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.AVAILABLE.value}
+    update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.PENDING.value}
     await db.products.update_one(
         {"_id": pid},
         {"$set": update_data}

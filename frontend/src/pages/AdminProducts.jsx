@@ -75,7 +75,9 @@ export default function AdminProducts() {
 
   const statusColor = (s) => {
     if (s === "removed") return { background: "#fef2f2", color: "#b91c1c" };
+    if (s === "rejected") return { background: "#fef2f2", color: "#b91c1c" };
     if (s === "available") return { background: "#f0fdf4", color: "#15803d" };
+    if (s === "pending") return { background: "#fffbeb", color: "#b45309" };
     if (s === "sold") return { background: "#f1f5f9", color: "#64748b" };
     return {};
   };
@@ -85,6 +87,7 @@ export default function AdminProducts() {
       <div className="admin-users-header">
         <h1>Product Management</h1>
         <div style={{ display: "flex", gap: 12 }}>
+          <Link to="/admin/review" className="admin-users-back">Review</Link>
           <Link to="/admin/users" className="admin-users-back">Users</Link>
           <Link to="/admin/reports" className="admin-users-back">Reports</Link>
           <Link to="/home" className="admin-users-back">Home</Link>
@@ -103,9 +106,11 @@ export default function AdminProducts() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}>
           <option value="">All statuses</option>
+          <option value="pending">Pending review</option>
           <option value="available">Available</option>
           <option value="sold">Sold</option>
           <option value="reserved">Reserved</option>
+          <option value="rejected">Rejected</option>
           <option value="removed">Removed</option>
         </select>
       </div>

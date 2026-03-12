@@ -432,3 +432,117 @@ async def resolve_report(
         }},
     )
     return {"ok": True, "message": f"Report {final_status}" + (" and product taken down" if body.status == "takedown" else "")}
+
+
+# =====================================================
+# Product review (approve / reject pending products)
+# =====================================================
+
+class ReviewBody(BaseModel):
+    action: str  # "approve" | "reject"
+    reason: Optional[str] = None
+
+
+@router.get("/products/pending", response_model=ProductListResponse)
+async def list_pending_products(
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    current_user: dict = Depends(get_current_admin_user),
+):
+    """Admin: list products awaiting review."""
+    db = get_database()
+    query = {"status": "pending"}
+
+    total = await db.products.count_documents(query)
+    skip = (page - 1) * size
+    docs = await db.products.find(query).sort("created_at", -1).skip(skip).limit(size).to_list(length=size)
+
+    seller_ids = list({d["seller_id"] for d in docs if d.get("seller_id")})
+    sellers = {}
+    if seller_ids:
+        async for u in db.users.find({"_id": {"$in": seller_ids}}, {"username": 1}):
+            sellers[u["_id"]] = u.get("username", "")
+
+    items = [
+        ProductListItem(
+            id=str(d["_id"]),
+            title=d.get("title", ""),
+            seller_id=str(d.get("seller_id", "")),
+            seller_username=sellers.get(d.get("seller_id"), ""),
+            price=d.get("price", 0),
+            status=d.get("status", "pending"),
+            category=d.get("category", ""),
+            report_count=0,
+            created_at=str(d["created_at"]) if d.get("created_at") else None,
+        )
+        for d in docs
+    ]
+    return ProductListResponse(items=items, total=total, page=page, size=size)
+
+
+@router.post("/products/{product_id}/review", status_code=status.HTTP_200_OK)
+async def review_product(
+    product_id: str,
+    body: ReviewBody,
+    current_user: dict = Depends(get_current_admin_user),
+):
+    """Admin: approve or reject a pending product. Sends notification to seller."""
+    if body.action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action must be 'approve' or 'reject'")
+
+    db = get_database()
+    try:
+        pid = ObjectId(product_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid product id")
+
+    product = await db.products.find_one({"_id": pid})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if product.get("status") != "pending":
+        raise HTTPException(status_code=400, detail=f"Product status is '{product.get('status')}', not 'pending'")
+
+    now = datetime.now(timezone.utc)
+    seller_id = str(product["seller_id"])
+    product_title = product.get("title", "Untitled")
+
+    if body.action == "approve":
+        await db.products.update_one(
+            {"_id": pid},
+            {"$set": {
+                "status": "available",
+                "reviewed_by": current_user["user_id"],
+                "reviewed_at": now,
+            }},
+        )
+        notif_title = "Product Approved"
+        notif_body = f'Your product "{product_title}" has been approved and is now listed!'
+        notif_link = f"/products/{product_id}"
+    else:
+        reason = body.reason or "Does not meet listing requirements"
+        await db.products.update_one(
+            {"_id": pid},
+            {"$set": {
+                "status": "rejected",
+                "reviewed_by": current_user["user_id"],
+                "reviewed_at": now,
+                "reject_reason": reason,
+            }},
+        )
+        notif_title = "Product Rejected"
+        notif_body = f'Your product "{product_title}" was rejected. Reason: {reason}'
+        notif_link = f"/my-products"
+
+    from routes.notifications import create_notification
+    try:
+        await create_notification(
+            user_id=seller_id,
+            ntype="product_review",
+            title=notif_title,
+            body=notif_body,
+            link=notif_link,
+        )
+    except Exception:
+        pass
+
+    return {"ok": True, "message": f"Product {body.action}d successfully"}
