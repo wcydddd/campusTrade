@@ -14,6 +14,7 @@ from routes.ws import router as ws_router
 from routes.notifications import router as notifications_router
 from routes.orders import router as orders_router
 from routes.favorites import router as favorites_router
+from routes.reports import router as reports_router
 
 app = FastAPI(
     title="CampusTrade API",
@@ -53,6 +54,7 @@ app.include_router(ws_router)
 app.include_router(notifications_router)
 app.include_router(orders_router)
 app.include_router(favorites_router)
+app.include_router(reports_router)
 
 # 启动时连接数据库 + 建立索引
 @app.on_event("startup")
@@ -91,6 +93,20 @@ async def startup_event():
 
     # AI 使用配额：按用户+日期快速查询
     await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
+
+    # login_attempts: 登录失败跟踪
+    await db.login_attempts.create_index("email", unique=True)
+
+    # security_events: 安全日志
+    await db.security_events.create_index("created_at")
+    await db.security_events.create_index("event")
+    await db.security_events.create_index("email")
+
+    # reports: 举报
+    await db.reports.create_index("product_id")
+    await db.reports.create_index("reporter_id")
+    await db.reports.create_index("status")
+    await db.reports.create_index("created_at")
 
 
 # 关闭时断开连接

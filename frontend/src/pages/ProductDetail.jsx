@@ -31,6 +31,11 @@ export default function ProductDetail() {
   const [favorited, setFavorited] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [orderMsg, setOrderMsg] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("spam");
+  const [reportDesc, setReportDesc] = useState("");
+  const [reportMsg, setReportMsg] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   const fallbackImg =
     "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade";
@@ -43,7 +48,7 @@ export default function ProductDetail() {
       setError("");
 
       try {
-        const res = await fetch(`${API_BASE}/products/${id}`);
+        const res = await authFetch(`${API_BASE}/products/${id}`);
         if (cancelled) return;
 
         if (!res.ok) {
@@ -131,6 +136,29 @@ export default function ProductDetail() {
       setOrderMsg(e.message || "Order failed");
     } finally {
       setOrdering(false);
+    }
+  }
+
+  async function handleReport() {
+    setReporting(true);
+    setReportMsg("");
+    try {
+      const res = await authFetch(`${API_BASE}/reports`, {
+        method: "POST",
+        body: JSON.stringify({ product_id: id, reason: reportReason, description: reportDesc }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setReportMsg("Report submitted successfully.");
+        setReportOpen(false);
+        setReportDesc("");
+      } else {
+        setReportMsg(data.detail || "Failed to submit report");
+      }
+    } catch (e) {
+      setReportMsg(e.message || "Failed");
+    } finally {
+      setReporting(false);
     }
   }
 
@@ -278,6 +306,54 @@ export default function ProductDetail() {
           <p style={{ color: "#64748b", fontSize: 14, fontStyle: "italic" }}>
             This is your product.
           </p>
+        )}
+
+        {user && product.seller_id && user.id !== product.seller_id && (
+          <div style={{ marginTop: 20 }}>
+            <button
+              onClick={() => setReportOpen(!reportOpen)}
+              style={{
+                background: "none", border: "none", color: "#94a3b8",
+                cursor: "pointer", fontSize: 13, textDecoration: "underline",
+              }}
+            >
+              Report this product
+            </button>
+
+            {reportOpen && (
+              <div style={{
+                marginTop: 10, padding: 16, background: "#f8fafc",
+                borderRadius: 10, border: "1px solid #e2e8f0",
+              }}>
+                <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600 }}>Reason</label>
+                <select value={reportReason} onChange={(e) => setReportReason(e.target.value)}
+                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #ddd", marginBottom: 10 }}>
+                  <option value="spam">Spam</option>
+                  <option value="fraud">Fraud / Scam</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="prohibited_item">Prohibited item</option>
+                  <option value="wrong_category">Wrong category</option>
+                  <option value="other">Other</option>
+                </select>
+                <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600 }}>Description (optional)</label>
+                <textarea value={reportDesc} onChange={(e) => setReportDesc(e.target.value)}
+                  placeholder="Provide more details..."
+                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #ddd", minHeight: 60, resize: "vertical", marginBottom: 10 }} />
+                <button onClick={handleReport} disabled={reporting}
+                  style={{
+                    padding: "8px 18px", background: "#ef4444", color: "#fff",
+                    border: "none", borderRadius: 8, cursor: reporting ? "not-allowed" : "pointer", fontWeight: 600,
+                  }}>
+                  {reporting ? "Submitting..." : "Submit Report"}
+                </button>
+              </div>
+            )}
+            {reportMsg && (
+              <p style={{ marginTop: 8, fontSize: 13, color: reportMsg.includes("success") ? "#16a34a" : "#ef4444" }}>
+                {reportMsg}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

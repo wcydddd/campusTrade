@@ -2,7 +2,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 
@@ -14,6 +14,7 @@ MAX_BCRYPT_BYTES = 72
 
 # JWT Bearer
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -73,6 +74,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return {"user_id": user_id, "email": payload.get("email")}
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+) -> Optional[dict]:
+    """Return current user dict if a valid token is present, else None (no 401)."""
+    if credentials is None:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return {"user_id": user_id, "email": payload.get("email")}
+    except Exception:
+        return None
 
 
 async def get_current_admin_user(

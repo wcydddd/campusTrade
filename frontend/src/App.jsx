@@ -8,6 +8,9 @@ import MeProfile from "./pages/MeProfile";
 import MyOrders from "./pages/MyOrders";
 import MyFavorites from "./pages/MyFavorites";
 import AdminUsers from "./pages/AdminUsers";
+import AdminProducts from "./pages/AdminProducts";
+import AdminReports from "./pages/AdminReports";
+import AdminReview from "./pages/AdminReview";
 import ChangePassword from "./pages/ChangePassword";
 import Chat from "./pages/Chat";
 import Conversations from "./pages/Conversations";
@@ -133,6 +136,36 @@ function App() {
             <ProtectedRoute>
               <AdminRoute>
                 <AdminUsers />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminProducts />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminReports />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/review"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminReview />
               </AdminRoute>
             </ProtectedRoute>
           }

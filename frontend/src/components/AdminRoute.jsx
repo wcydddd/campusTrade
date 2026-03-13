@@ -15,7 +15,7 @@ export default function AdminRoute({ children }) {
     }
   } catch (_) {}
 
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "moderator") {
     return <Navigate to="/home" replace state={{ from: location }} />;
   }
   return children;

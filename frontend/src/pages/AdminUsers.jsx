@@ -80,7 +80,7 @@ export default function AdminUsers() {
     setActionLoading(userId);
     try {
       const res = await authFetch(`${API_BASE}/admin/users/${userId}/role`, {
-        method: "PATCH",
+        method: "POST",
         body: JSON.stringify({ role }),
       });
       const json = await res.json().catch(() => ({}));
@@ -113,8 +113,12 @@ export default function AdminUsers() {
   return (
     <div className="admin-users">
       <div className="admin-users-header">
-        <h1>User management</h1>
-        <Link to="/home" className="admin-users-back">Back to Home</Link>
+        <h1>User Management</h1>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Link to="/admin/products" className="admin-users-back">Products</Link>
+          <Link to="/admin/reports" className="admin-users-back">Reports</Link>
+          <Link to="/home" className="admin-users-back">Home</Link>
+        </div>
       </div>
 
       <div className="admin-users-toolbar">
@@ -171,6 +175,7 @@ export default function AdminUsers() {
                         onChange={(e) => handleRole(u.id, e.target.value)}
                       >
                         <option value="user">user</option>
+                        <option value="moderator">moderator</option>
                         <option value="admin">admin</option>
                       </select>
                     </td>

@@ -468,8 +468,8 @@ export default function PublishProduct() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(extractErrorMsg(data, "Publish failed."));
-        setSuccess("Product published successfully!");
-        setTimeout(() => navigate("/home"), 1500);
+        setSuccess("Product submitted! It will appear after admin review.");
+        setTimeout(() => navigate("/my-products"), 2000);
         return;
       }
 
@@ -492,8 +492,8 @@ export default function PublishProduct() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(extractErrorMsg(data, "Publish failed."));
-        setSuccess("Product published successfully!");
-        setTimeout(() => navigate("/home"), 1500);
+        setSuccess("Product submitted! It will appear after admin review.");
+        setTimeout(() => navigate("/my-products"), 2000);
         return;
       }
 
@@ -513,8 +513,8 @@ export default function PublishProduct() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(extractErrorMsg(data, "Publish failed."));
-      setSuccess("Product published successfully!");
-      setTimeout(() => navigate("/home"), 1500);
+      setSuccess("Product submitted! It will appear after admin review.");
+      setTimeout(() => navigate("/my-products"), 2000);
     } catch (err) {
       setError(err.message || "Publish failed.");
     } finally {

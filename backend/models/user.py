@@ -3,9 +3,10 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 
-class UserRole(str,Enum):
-    USER='user'
-    ADMIN='admin'
+class UserRole(str, Enum):
+    USER = 'user'
+    MODERATOR = 'moderator'
+    ADMIN = 'admin'
 
 
 # 用户注册请求

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Request
 from pydantic import BaseModel, EmailStr
 from models.user import UserCreate, UserLogin, UserResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
 from utils.security import (
@@ -9,8 +9,16 @@ from utils.security import (
     is_valid_university_email
 )
 from utils.database import get_database
-from utils.otp import generate_numeric_code, hash_code      # ✅ 新增：验证码生成 & hash
-from utils.email import send_verification_code              # ✅ 新增：SMTP 发验证码
+from utils.otp import generate_numeric_code, hash_code
+from utils.email import send_verification_code
+from utils.rate_limiter import (
+    check_rate_limit,
+    check_login_lockout,
+    record_login_failure,
+    reset_login_failures,
+    LOGIN_MAX_FAILURES,
+)
+from utils.security_logger import log_security_event
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 
@@ -42,12 +50,13 @@ class VerifyCodeRequest(BaseModel):
 # ✅ 方案A：注册（不返回 token）
 # =====================================================
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, request: Request):
     """
     注册（方案A）：
     - 创建用户并设置 is_verified=False
     - 不返回 token（必须先邮箱验证成功，才能 login 获取 token）
     """
+    await check_rate_limit(request, scope="register", max_hits=5, window_seconds=60)
     db = get_database()
 
     email = user_data.email.lower()
@@ -87,6 +96,8 @@ async def register(user_data: UserCreate):
 
     result = await db.users.insert_one(new_user)
 
+    await log_security_event("register", email=email, user_id=str(result.inserted_id), request=request)
+
     return UserResponse(
         id=str(result.inserted_id),
         email=new_user["email"],
@@ -102,15 +113,16 @@ async def register(user_data: UserCreate):
 # ✅ 发送验证码（人员验证第 1 步）
 # =====================================================
 @router.post("/send-verification-code")
-async def send_email_code(req: SendCodeRequest):
+async def send_email_code(req: SendCodeRequest, request: Request):
     """
     发送邮箱验证码：
     1) 校验学校邮箱
     2) 必须已注册用户才可发送
     3) 已验证的不再发送
-    4) 冷却时间限制防刷
+    4) 冷却时间限制防刷（IP + 邮箱）
     5) 生成验证码 -> hash 入库（不存明文）-> 发邮件
     """
+    await check_rate_limit(request, scope="otp_send", max_hits=5, window_seconds=300, user_key=req.email.lower())
     db = get_database()
     email = req.email.lower()
 
@@ -173,12 +185,13 @@ async def send_email_code(req: SendCodeRequest):
 # ✅ 校验验证码（人员验证第 2 步）
 # =====================================================
 @router.post("/verify-email")
-async def verify_email(req: VerifyCodeRequest):
+async def verify_email(req: VerifyCodeRequest, request: Request):
     """
     校验验证码：
     - 成功后：users.is_verified = True
     - 不返回 token（方案A：token 由 /auth/login 发）
     """
+    await check_rate_limit(request, scope="otp_verify", max_hits=10, window_seconds=300, user_key=req.email.lower())
     db = get_database()
     email = req.email.lower()
     code = req.code.strip()
@@ -231,14 +244,20 @@ async def verify_email(req: VerifyCodeRequest):
 # ✅ 登录（必须 is_verified=True 才发 token）
 # =====================================================
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin):
+async def login(user_data: UserLogin, request: Request):
     """用户登录（方案A：必须完成邮箱验证才允许登录）"""
+    await check_rate_limit(request, scope="login", max_hits=10, window_seconds=60, user_key=user_data.email.lower())
+
     db = get_database()
     email = user_data.email.lower()
+
+    # 0) 检查是否因多次失败被锁定
+    await check_login_lockout(db, email)
 
     # 1) 查找用户
     user = await db.users.find_one({"email": email})
     if not user:
+        await log_security_event("login_failure", email=email, request=request, detail="User not found")
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # 2) 未验证邮箱：禁止登录
@@ -247,15 +266,24 @@ async def login(user_data: UserLogin):
 
     # 2b) 封禁用户禁止登录
     if user.get("banned"):
+        await log_security_event("login_failure", email=email, request=request, detail="Account banned")
         raise HTTPException(status_code=403, detail="Account is banned.")
 
     # 3) 验证密码
     if not verify_password(user_data.password, user["hashed_password"]):
+        from utils.rate_limiter import _get_client_ip
+        ip = _get_client_ip(request)
+        failures = await record_login_failure(db, email, ip)
+        await log_security_event("login_failure", email=email, request=request, detail=f"Wrong password (attempt {failures})")
+        if failures >= LOGIN_MAX_FAILURES:
+            await log_security_event("login_lockout", email=email, request=request, detail=f"Locked after {failures} failures")
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # 4) 生成 token
+    # 4) 登录成功 → 清除失败记录
+    await reset_login_failures(db, email)
     user_id = str(user["_id"])
     access_token = create_access_token(data={"sub": user_id, "email": user["email"]})
+    await log_security_event("login_success", email=email, user_id=user_id, request=request)
 
     # 5) 返回 token + user
     user_response = UserResponse(

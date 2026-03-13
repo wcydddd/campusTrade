@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import { API_BASE, logout } from "../api";
+import { API_BASE, authFetch, logout } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useUnread } from "../context/UnreadContext";
 import NotificationBell from "../components/NotificationBell";
@@ -65,7 +65,7 @@ function Home() {
     let cancelled = false;
     async function fetchTrending() {
       try {
-        const res = await fetch(`${API_BASE}/products/trending`);
+        const res = await authFetch(`${API_BASE}/products/trending`);
         if (!res.ok) return;
         const list = await res.json();
         if (!cancelled && Array.isArray(list)) {
@@ -109,7 +109,7 @@ function Home() {
       });
 
       try {
-        const res = await fetch(`${API_BASE}/products${query}`);
+        const res = await authFetch(`${API_BASE}/products${query}`);
         if (!res.ok)
           throw new Error(`Failed to load products (HTTP ${res.status})`);
         const list = await res.json();
@@ -311,11 +311,18 @@ function Home() {
                   </Link>
                 </li>
                 {currentUser?.role === "admin" && (
-                  <li>
-                    <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
-                      User management
-                    </Link>
-                  </li>
+                  <>
+                    <li>
+                      <Link to="/admin/review" onClick={() => setMeMenuOpen(false)}>
+                        Product review
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
+                        User management
+                      </Link>
+                    </li>
+                  </>
                 )}
               </ul>
             )}

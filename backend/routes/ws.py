@@ -163,6 +163,15 @@ async def _handle_chat(from_id: str, data: dict, websocket: WebSocket):
         return
 
     db = get_database()
+
+    sender = await db.users.find_one({"_id": ObjectId(from_id)})
+    if sender and sender.get("banned"):
+        await websocket.send_json({
+            "type": "error",
+            "message": "Account is banned. You cannot send messages.",
+        })
+        return
+
     now = datetime.utcnow()
 
     doc = {

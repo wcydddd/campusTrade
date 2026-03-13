@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from utils.database import get_database
-from utils.security import get_current_user
+from utils.security import get_current_user, get_optional_user
 from utils.ai_helper import analyze_image, get_categories
 from utils.image_service import process_and_save_image, process_image_bytes, delete_image
 from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
@@ -23,7 +23,7 @@ MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024
 # Utility functions
 # =====================================================
 
-def _to_response(doc: dict) -> ProductResponse:
+def _to_response(doc: dict, is_favorited: bool = None) -> ProductResponse:
     """Convert a MongoDB document to a response model."""
     return ProductResponse(
         id=str(doc["_id"]),
@@ -40,22 +40,25 @@ def _to_response(doc: dict) -> ProductResponse:
         created_at=doc.get("created_at"),
         updated_at=doc.get("updated_at"),
         thumb_url=doc.get("thumb_url"),
+        is_favorited=is_favorited,
     )
 
 
 async def get_verified_user(current_user: dict, db):
-    """Get the current user and ensure they are verified."""
+    """Get the current user and ensure they are verified and not banned."""
     try:
         uid = ObjectId(current_user["user_id"])
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid user id")
-    
+
     user = await db.users.find_one({"_id": uid})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if user.get("banned"):
+        raise HTTPException(status_code=403, detail="Account is banned. You cannot perform this action.")
     if not user.get("is_verified", False):
         raise HTTPException(status_code=403, detail="User not verified. Please verify your email first.")
-    
+
     return user, uid
 
 
@@ -71,13 +74,14 @@ async def list_products(
     max_price: Optional[float] = Query(default=None, description="Maximum price"),
     search: Optional[str] = Query(default=None, description="Search in title/description"),
     include_sold: bool = Query(default=False, description="Include sold products (default: exclude)"),
+    current_user: Optional[dict] = Depends(get_optional_user),
 ):
     """List products with optional filters. Sold products excluded by default."""
     db = get_database()
 
-    query = {}
+    query = {"status": {"$nin": ["removed", "pending", "rejected"]}}
     if not include_sold:
-        query["status"] = {"$ne": "sold"}
+        query["status"] = {"$nin": ["sold", "removed", "pending", "rejected"]}
     
     if sustainable is not None:
         query["sustainable"] = sustainable
@@ -101,7 +105,21 @@ async def list_products(
         ]
 
     docs = await db.products.find(query).sort("created_at", -1).to_list(length=200)
-    return [_to_response(d) for d in docs]
+
+    fav_set = set()
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            product_ids = [d["_id"] for d in docs]
+            if product_ids:
+                fav_docs = await db.favorites.find(
+                    {"user_id": uid, "product_id": {"$in": product_ids}}
+                ).to_list(length=len(product_ids))
+                fav_set = {f["product_id"] for f in fav_docs}
+        except Exception:
+            pass
+
+    return [_to_response(d, is_favorited=(d["_id"] in fav_set)) for d in docs]
 
 
 # =====================================================
@@ -121,6 +139,7 @@ async def list_product_categories():
 @router.get("/trending", response_model=List[ProductResponse])
 async def list_trending(
     limit: int = Query(12, ge=1, le=50, description="Max number of trending products"),
+    current_user: Optional[dict] = Depends(get_optional_user),
 ):
     """Get trending products sorted by view count. Public access."""
     db = get_database()
@@ -131,7 +150,21 @@ async def list_trending(
         .limit(limit)
         .to_list(length=limit)
     )
-    return [_to_response(d) for d in docs]
+
+    fav_set = set()
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            product_ids = [d["_id"] for d in docs]
+            if product_ids:
+                fav_docs = await db.favorites.find(
+                    {"user_id": uid, "product_id": {"$in": product_ids}}
+                ).to_list(length=len(product_ids))
+                fav_set = {f["product_id"] for f in fav_docs}
+        except Exception:
+            pass
+
+    return [_to_response(d, is_favorited=(d["_id"] in fav_set)) for d in docs]
 
 
 # =====================================================
@@ -157,7 +190,10 @@ async def get_my_products(current_user: dict = Depends(get_current_user)):
 # =====================================================
 
 @router.get("/{id}", response_model=ProductResponse)
-async def get_product(id: str):
+async def get_product(
+    id: str,
+    current_user: Optional[dict] = Depends(get_optional_user),
+):
     """Get product detail and increment view count."""
     db = get_database()
 
@@ -169,11 +205,22 @@ async def get_product(id: str):
     doc = await db.products.find_one({"_id": pid})
     if not doc:
         raise HTTPException(status_code=404, detail="Product not found")
+    if doc.get("status") == "removed":
+        raise HTTPException(status_code=410, detail="Product has been removed by admin")
 
     await db.products.update_one({"_id": pid}, {"$inc": {"views": 1}})
     doc = await db.products.find_one({"_id": pid})
 
-    return _to_response(doc)
+    is_fav = False
+    if current_user:
+        try:
+            uid = ObjectId(current_user["user_id"])
+            fav = await db.favorites.find_one({"user_id": uid, "product_id": pid})
+            is_fav = fav is not None
+        except Exception:
+            pass
+
+    return _to_response(doc, is_favorited=is_fav)
 
 
 # =====================================================
@@ -236,7 +283,7 @@ async def create_product_with_image(
         "sustainable": sustainable,
         "images": [image_url],
         "thumb_url": thumb_url,
-        "status": "available",
+        "status": "pending",
         "views": 0,
         "created_at": now,
         "updated_at": now,
@@ -292,7 +339,7 @@ async def create_product_with_ai(
         "images": [image_url],
         "thumb_url": thumb_url,
         "keywords": ai_data.get("keywords", []),
-        "status": "available",
+        "status": "pending",
         "views": 0,
         "ai_generated": True,
         "created_at": now,
@@ -357,7 +404,7 @@ async def update_product(
     payload: ProductCreate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update a product. Editing automatically puts sold items back on sale."""
+    """Update a product. Edited products go back to pending review."""
     db = get_database()
 
     try:
@@ -375,7 +422,7 @@ async def update_product(
         raise HTTPException(status_code=403, detail="You can only update your own products")
 
     now = datetime.utcnow()
-    update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.AVAILABLE.value}
+    update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.PENDING.value}
     await db.products.update_one(
         {"_id": pid},
         {"$set": update_data}

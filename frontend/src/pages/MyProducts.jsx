@@ -130,6 +130,22 @@ function MyProducts() {
 
                 <div className="my-products-card-body">
                   <h3>{p.title}</h3>
+                  {p.status === "pending" && (
+                    <span style={{
+                      display: "inline-block", padding: "2px 10px", borderRadius: 999,
+                      background: "#fffbeb", color: "#b45309", fontSize: 12, fontWeight: 600, marginBottom: 4,
+                    }}>
+                      Pending review
+                    </span>
+                  )}
+                  {p.status === "rejected" && (
+                    <span style={{
+                      display: "inline-block", padding: "2px 10px", borderRadius: 999,
+                      background: "#fef2f2", color: "#b91c1c", fontSize: 12, fontWeight: 600, marginBottom: 4,
+                    }}>
+                      Rejected
+                    </span>
+                  )}
                   <p className="my-products-card-price">£{p.price}</p>
                   <p className="my-products-card-meta">
                     {CATEGORY_DISPLAY[p.category] ?? p.category} · {p.condition}
