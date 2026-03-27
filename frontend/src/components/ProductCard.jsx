@@ -1,7 +1,9 @@
 import { useState } from "react";
 import "./ProductCard.css";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
+import { useAuth } from "../context/AuthContext";
+import { redirectToLogin } from "../utils/authRedirect";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -16,6 +18,8 @@ const CATEGORY_DISPLAY = {
 
 function ProductCard({ product, onUnfavorited }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const [fav, setFav] = useState(!!product.is_favorited);
 
   const isSold = product.status === "sold";
@@ -31,6 +35,11 @@ function ProductCard({ product, onUnfavorited }) {
 
   async function toggleFav(e) {
     e.stopPropagation();
+    if (!isAuthenticated) {
+      redirectToLogin(navigate, location, "Please log in first to manage favorites.");
+      return;
+    }
+
     const prev = fav;
     setFav(!prev);
     try {
@@ -69,7 +78,11 @@ function ProductCard({ product, onUnfavorited }) {
           <button
             className={`product-card-fav ${fav ? "product-card-fav-active" : ""}`}
             onClick={toggleFav}
-            title={fav ? "Remove from favorites" : "Add to favorites"}
+            title={
+              isAuthenticated
+                ? (fav ? "Remove from favorites" : "Add to favorites")
+                : "Please log in first to manage favorites"
+            }
           >
             {fav ? "♥" : "♡"}
           </button>

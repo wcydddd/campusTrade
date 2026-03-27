@@ -1,12 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
+import SellerProfile from "./pages/SellerProfile";
 import PublishProduct from "./pages/PublishProduct";
 import MyProducts from "./pages/MyProducts";
 import EditProduct from "./pages/EditProduct";
 import MeProfile from "./pages/MeProfile";
 import MyOrders from "./pages/MyOrders";
+import OrderDetail from "./pages/OrderDetail";
 import MyFavorites from "./pages/MyFavorites";
+import RecentViewed from "./pages/RecentViewed";
+import MyReviews from "./pages/MyReviews";
 import AdminUsers from "./pages/AdminUsers";
 import AdminProducts from "./pages/AdminProducts";
 import AdminReports from "./pages/AdminReports";
@@ -24,24 +28,13 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 默认：有 token 去首页，没有去登录 */}
-        <Route path="/" element={
-          localStorage.getItem("token")
-            ? <Navigate to="/home" replace />
-            : <Navigate to="/login" replace />
-        } />
+        {/* 默认进入商品列表，支持游客浏览 */}
+        <Route path="/" element={<Navigate to="/home" replace />} />
 
-        {/* 需要登录才能看商品列表 */}
-        <Route path="/home" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
-        <Route path="/products/:id" element={
-          <ProtectedRoute>
-            <ProductDetail />
-          </ProtectedRoute>
-        } />
+        {/* 公共浏览页 */}
+        <Route path="/home" element={<Home />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/seller/:sellerId" element={<SellerProfile />} />
 
         {/* 公开的认证相关页面 */}
         <Route path="/login" element={<Login />} />
@@ -121,10 +114,34 @@ function App() {
           }
         />
         <Route
+          path="/orders/:orderId"
+          element={
+            <ProtectedRoute>
+              <OrderDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/my-favorites"
           element={
             <ProtectedRoute>
               <MyFavorites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-reviews"
+          element={
+            <ProtectedRoute>
+              <MyReviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recent-viewed"
+          element={
+            <ProtectedRoute>
+              <RecentViewed />
             </ProtectedRoute>
           }
         />

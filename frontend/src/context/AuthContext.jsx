@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { getMe } from "../api";
+import { getMe, getStoredToken, setStoredUser } from "../api";
 
 const AuthContext = createContext(null);
 
@@ -9,15 +9,13 @@ export function AuthProvider({ children }) {
 
   const setUser = useCallback((next) => {
     setUserState(next);
-    if (next) {
-      localStorage.setItem("user", JSON.stringify(next));
-    }
+    setStoredUser(next);
   }, []);
 
   // App 启动时：有 token 则拉一次当前用户，刷新状态
   useEffect(() => {
     let cancelled = false;
-    const token = localStorage.getItem("token");
+    const token = getStoredToken();
 
     if (!token || token.trim() === "") {
       setUserState(null);
@@ -29,7 +27,7 @@ export function AuthProvider({ children }) {
       .then((me) => {
         if (!cancelled) {
           setUserState(me);
-          localStorage.setItem("user", JSON.stringify(me));
+          setStoredUser(me);
         }
       })
       .catch(() => {
@@ -52,12 +50,12 @@ export function AuthProvider({ children }) {
   // 登录成功后派发 auth:login，这里拉一次当前用户以更新 context（避免只写了 localStorage 但 context 仍为 null）
   useEffect(() => {
     const handleLogin = () => {
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       if (!token) return;
       getMe()
         .then((me) => {
           setUserState(me);
-          localStorage.setItem("user", JSON.stringify(me));
+          setStoredUser(me);
         })
         .catch(() => setUserState(null));
     };
@@ -67,12 +65,12 @@ export function AuthProvider({ children }) {
 
   /** 手动刷新当前用户（如编辑资料后可调用） */
   const refreshUser = useCallback(() => {
-    const token = localStorage.getItem("token");
+    const token = getStoredToken();
     if (!token) return setUserState(null);
     getMe()
       .then((me) => {
         setUserState(me);
-        localStorage.setItem("user", JSON.stringify(me));
+        setStoredUser(me);
       })
       .catch(() => setUserState(null));
   }, []);

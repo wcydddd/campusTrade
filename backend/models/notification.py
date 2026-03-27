@@ -6,6 +6,7 @@ from enum import Enum
 
 class NotificationType(str, Enum):
     NEW_ORDER = "new_order"
+    ORDER_UPDATE = "order_update"
     NEW_FAVORITE = "new_favorite"
     PRICE_DROP = "price_drop"
     SYSTEM = "system"

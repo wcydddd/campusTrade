@@ -42,7 +42,7 @@ class ProductBase(BaseModel):
     category: ProductCategory
     condition: str
     sustainable: bool = False
-    images: List[str] = []
+    images: List[str] = Field(default_factory=list)
 
 class ProductCreate(ProductBase):
     pass
@@ -52,6 +52,7 @@ class ProductInDB(ProductBase):
     seller_id: PyObjectId
     status: ProductStatus = ProductStatus.PENDING
     views: int = 0
+    boosted_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -72,6 +73,7 @@ class ProductResponse(BaseModel):
     seller_id: str
     status: str
     views: int
+    boosted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     thumb_url: Optional[str] = None

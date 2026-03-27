@@ -6,6 +6,7 @@ import { useWs } from "../context/WebSocketContext";
 
 const ICON_LABELS = {
   new_order: "New message",
+  order_update: "Order update",
   new_favorite: "New favorite",
   price_drop: "Price drop",
   system: "System",
@@ -13,6 +14,7 @@ const ICON_LABELS = {
 
 const ICON_EMOJI = {
   new_order: "\u{1F4E8}",
+  order_update: "\u{1F4E6}",
   new_favorite: "\u2764\uFE0F",
   price_drop: "\u{1F4B0}",
   system: "\u{1F514}",

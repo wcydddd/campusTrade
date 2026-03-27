@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile, File, Form
 from typing import List, Optional
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from utils.database import get_database
 from utils.security import get_current_user, get_optional_user
 from utils.ai_helper import analyze_image, get_categories
 from utils.image_service import process_and_save_image, process_image_bytes, delete_image
+from routes.notifications import create_notification
 from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
 from config import settings
 
@@ -25,6 +26,13 @@ MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024
 
 def _to_response(doc: dict, is_favorited: bool = None) -> ProductResponse:
     """Convert a MongoDB document to a response model."""
+    images_raw = doc.get("images", [])
+    if isinstance(images_raw, str):
+        images = [images_raw]
+    elif isinstance(images_raw, list):
+        images = [x for x in images_raw if isinstance(x, str) and x]
+    else:
+        images = []
     return ProductResponse(
         id=str(doc["_id"]),
         seller_id=str(doc["seller_id"]),
@@ -34,14 +42,25 @@ def _to_response(doc: dict, is_favorited: bool = None) -> ProductResponse:
         category=doc["category"],
         condition=doc["condition"],
         sustainable=doc.get("sustainable", False),
-        images=doc.get("images", []),
+        images=images,
         status=doc.get("status", "available"),
         views=doc.get("views", 0),
+        boosted_at=doc.get("boosted_at"),
         created_at=doc.get("created_at"),
         updated_at=doc.get("updated_at"),
         thumb_url=doc.get("thumb_url"),
         is_favorited=is_favorited,
     )
+
+
+def _sort_pipeline(match_query: dict, limit: int):
+    """Sort by boosted_at first, then created_at (desc)."""
+    return [
+        {"$match": match_query},
+        {"$addFields": {"sort_at": {"$ifNull": ["$boosted_at", "$created_at"]}}},
+        {"$sort": {"sort_at": -1, "created_at": -1}},
+        {"$limit": limit},
+    ]
 
 
 async def get_verified_user(current_user: dict, db):
@@ -104,7 +123,7 @@ async def list_products(
             {"description": {"$regex": search, "$options": "i"}},
         ]
 
-    docs = await db.products.find(query).sort("created_at", -1).to_list(length=200)
+    docs = await db.products.aggregate(_sort_pipeline(query, 200)).to_list(length=200)
 
     fav_set = set()
     if current_user:
@@ -181,8 +200,148 @@ async def get_my_products(current_user: dict = Depends(get_current_user)):
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid user id")
 
-    docs = await db.products.find({"seller_id": uid}).sort("created_at", -1).to_list(length=100)
+    docs = await db.products.aggregate(
+        _sort_pipeline({"seller_id": uid}, 100)
+    ).to_list(length=100)
     return [_to_response(d) for d in docs]
+
+
+# =====================================================
+# GET /products/seller/{seller_id} - Seller's available products
+# =====================================================
+
+@router.get("/seller/{seller_id}", response_model=List[ProductResponse])
+async def get_seller_products(seller_id: str):
+    """Get public available products by seller id."""
+    db = get_database()
+    try:
+        sid = ObjectId(seller_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid seller id")
+
+    seller = await db.users.find_one({"_id": sid})
+    if not seller or seller.get("banned"):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    docs = await db.products.aggregate(
+        _sort_pipeline({"seller_id": sid, "status": "available"}, 200)
+    ).to_list(length=200)
+    return [_to_response(d, is_favorited=False) for d in docs]
+
+
+# =====================================================
+# GET /products/history/me - current user's browsing history
+# =====================================================
+
+@router.get("/history/me")
+async def get_my_browsing_history(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Get current user's recent browsing history.
+    Returns product summary with viewed_at.
+    """
+    db = get_database()
+    try:
+        uid = ObjectId(current_user["user_id"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid user id")
+
+    pipeline = [
+        {"$match": {"user_id": uid}},
+        {"$sort": {"viewed_at": -1}},
+        {"$limit": limit},
+        {
+            "$lookup": {
+                "from": "products",
+                "localField": "product_id",
+                "foreignField": "_id",
+                "as": "product",
+            }
+        },
+        {"$unwind": "$product"},
+        {
+            "$match": {
+                "product.status": {"$nin": ["removed", "pending", "rejected"]},
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "viewed_at": 1,
+                "product": {
+                    "id": {"$toString": "$product._id"},
+                    "title": "$product.title",
+                    "price": "$product.price",
+                    "category": "$product.category",
+                    "condition": "$product.condition",
+                    "status": "$product.status",
+                    "seller_id": {"$toString": "$product.seller_id"},
+                    "images": {"$ifNull": ["$product.images", []]},
+                    "thumb_url": "$product.thumb_url",
+                },
+            }
+        },
+    ]
+
+    docs = await db.browsing_history.aggregate(pipeline).to_list(length=limit)
+    return {"items": docs}
+
+
+# =====================================================
+# POST /products/{id}/boost - one-click bump product
+# =====================================================
+
+@router.post("/{id}/boost")
+async def boost_product(
+    id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Bump own available product. Each product can be boosted once per 24 hours."""
+    db = get_database()
+
+    try:
+        pid = ObjectId(id)
+        uid = ObjectId(current_user["user_id"])
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid id")
+
+    product = await db.products.find_one({"_id": pid})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if str(product.get("seller_id")) != str(uid):
+        raise HTTPException(status_code=403, detail="You can only boost your own products")
+
+    status_value = product.get("status")
+    if status_value in [ProductStatus.SOLD.value, ProductStatus.REMOVED.value]:
+        raise HTTPException(status_code=400, detail="Sold or removed products cannot be boosted")
+    if status_value != ProductStatus.AVAILABLE.value:
+        raise HTTPException(status_code=400, detail="Only available products can be boosted")
+
+    now = datetime.utcnow()
+    last_boosted = product.get("boosted_at")
+    if last_boosted and (now - last_boosted) < timedelta(hours=24):
+        next_boost_at = last_boosted + timedelta(hours=24)
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "This product can only be boosted once every 24 hours",
+                "next_boost_at": next_boost_at.isoformat(),
+            },
+        )
+
+    await db.products.update_one(
+        {"_id": pid},
+        {"$set": {"boosted_at": now, "updated_at": now}},
+    )
+
+    return {
+        "ok": True,
+        "message": "Product boosted successfully",
+        "boosted_at": now.isoformat(),
+        "next_boost_at": (now + timedelta(hours=24)).isoformat(),
+    }
 
 
 # =====================================================
@@ -217,6 +376,14 @@ async def get_product(
             uid = ObjectId(current_user["user_id"])
             fav = await db.favorites.find_one({"user_id": uid, "product_id": pid})
             is_fav = fav is not None
+            await db.browsing_history.update_one(
+                {"user_id": uid, "product_id": pid},
+                {
+                    "$set": {"viewed_at": datetime.utcnow()},
+                    "$setOnInsert": {"created_at": datetime.utcnow()},
+                },
+                upsert=True,
+            )
         except Exception:
             pass
 
@@ -255,7 +422,9 @@ async def create_product(
 
 @router.post("/with-image", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_with_image(
-    file: UploadFile = File(..., description="Product image"),
+    files: Optional[List[UploadFile]] = File(default=None, description="Product images"),
+    file: Optional[UploadFile] = File(default=None, description="Backward-compatible single product image"),
+    existing_images: Optional[str] = Form(default=None, description="JSON array of existing image urls"),
     title: str = Form(..., description="Product title"),
     description: str = Form(..., description="Product description"),
     price: float = Form(..., description="Price"),
@@ -264,13 +433,35 @@ async def create_product_with_image(
     sustainable: bool = Form(default=False, description="Whether the product is sustainable"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a product with an uploaded image. Verified users only. Image is compressed and thumbnail generated."""
+    """Create a product with uploaded image(s). Verified users only."""
     db = get_database()
     user, uid = await get_verified_user(current_user, db)
 
-    result = await process_and_save_image(file)
-    image_url = result["image_url"]
-    thumb_url = result.get("thumb_url")
+    extra_images: List[str] = []
+    if existing_images:
+        try:
+            import json
+            parsed = json.loads(existing_images)
+            if isinstance(parsed, list):
+                extra_images = [x for x in parsed if isinstance(x, str) and x]
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid existing_images format")
+
+    upload_files: List[UploadFile] = []
+    if files:
+        upload_files.extend(files)
+    if file:
+        upload_files.append(file)
+    if not upload_files and not extra_images:
+        raise HTTPException(status_code=400, detail="Please upload at least one image")
+
+    image_urls: List[str] = list(extra_images)
+    thumb_urls: List[str] = []
+    for f in upload_files:
+        r = await process_and_save_image(f)
+        image_urls.append(r["image_url"])
+        if r.get("thumb_url"):
+            thumb_urls.append(r["thumb_url"])
 
     now = datetime.utcnow()
     doc = {
@@ -281,8 +472,8 @@ async def create_product_with_image(
         "category": category,
         "condition": condition,
         "sustainable": sustainable,
-        "images": [image_url],
-        "thumb_url": thumb_url,
+        "images": image_urls,
+        "thumb_url": thumb_urls[0] if thumb_urls else None,
         "status": "pending",
         "views": 0,
         "created_at": now,
@@ -395,6 +586,45 @@ async def preview_ai_analysis(
 
 
 # =====================================================
+# POST /products/{id}/images/upload - upload extra images for edit
+# =====================================================
+
+@router.post("/{id}/images/upload")
+async def upload_product_images(
+    id: str,
+    files: List[UploadFile] = File(..., description="Additional product images"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload additional images for an existing product (owner only)."""
+    db = get_database()
+    try:
+        pid = ObjectId(id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid product id")
+
+    product = await db.products.find_one({"_id": pid})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    user, uid = await get_verified_user(current_user, db)
+    if str(product["seller_id"]) != str(uid):
+        raise HTTPException(status_code=403, detail="You can only update your own products")
+
+    if not files:
+        raise HTTPException(status_code=400, detail="Please upload at least one image")
+
+    image_urls: List[str] = []
+    thumb_urls: List[str] = []
+    for f in files:
+        r = await process_and_save_image(f)
+        image_urls.append(r["image_url"])
+        if r.get("thumb_url"):
+            thumb_urls.append(r["thumb_url"])
+
+    return {"images": image_urls, "thumb_urls": thumb_urls}
+
+
+# =====================================================
 # PUT /products/{id} - Update product (owner only)
 # =====================================================
 
@@ -422,11 +652,40 @@ async def update_product(
         raise HTTPException(status_code=403, detail="You can only update your own products")
 
     now = datetime.utcnow()
+    old_price = existing.get("price")
     update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.PENDING.value}
+    new_price = update_data.get("price")
+    old_images = existing.get("images", []) if isinstance(existing.get("images"), list) else []
+    new_images = update_data.get("images", []) if isinstance(update_data.get("images"), list) else []
+    removed_images = [u for u in old_images if u not in new_images]
+    for image_url in removed_images:
+        delete_image(image_url)
     await db.products.update_one(
         {"_id": pid},
         {"$set": update_data}
     )
+
+    # Price-drop alert: notify users who favorited this product (exclude seller)
+    if isinstance(old_price, (int, float)) and isinstance(new_price, (int, float)) and new_price < old_price:
+        fav_docs = await db.favorites.find({"product_id": pid}).to_list(length=10000)
+        for fav in fav_docs:
+            fav_uid = fav.get("user_id")
+            if not fav_uid:
+                continue
+            if str(fav_uid) == str(uid):
+                continue
+            await create_notification(
+                user_id=str(fav_uid),
+                ntype="price_drop",
+                title="Price dropped",
+                body=f"'{update_data.get('title', existing.get('title', 'A product'))}' dropped from £{old_price} to £{new_price}.",
+                link=f"/products/{id}",
+                meta={
+                    "product_id": str(pid),
+                    "price_from": float(old_price),
+                    "price_to": float(new_price),
+                },
+            )
 
     updated = await db.products.find_one({"_id": pid})
     return _to_response(updated)

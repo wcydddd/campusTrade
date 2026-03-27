@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { API_BASE, authFetch } from "../api";
+import { API_BASE, authFetch, getStoredToken } from "../api";
 import "./PublishProduct.css";
 
 const ENUM_TO_CATEGORY = {
@@ -19,6 +19,12 @@ const CONDITION_OPTIONS = [
   { value: "fair", label: "Fair" },
 ];
 
+function resolveMediaUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
+}
+
 export default function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,6 +41,7 @@ export default function EditProduct() {
   const [condition, setCondition] = useState("good");
   const [sustainable, setSustainable] = useState(false);
   const [images, setImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +139,43 @@ export default function EditProduct() {
     }
   }
 
+  async function handleAddImages(files) {
+    if (!id || !files?.length) return;
+    setError("");
+    setUploadingImages(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const token = getStoredToken();
+      const res = await fetch(`${API_BASE}/products/${id}/images/upload`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || "Upload failed");
+      const newImages = Array.isArray(data.images) ? data.images : [];
+      setImages((prev) => [...prev, ...newImages]);
+    } catch (e) {
+      setError(e.message || "Upload failed");
+    } finally {
+      setUploadingImages(false);
+    }
+  }
+
+  function moveImage(from, to) {
+    setImages((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const arr = [...prev];
+      [arr[from], arr[to]] = [arr[to], arr[from]];
+      return arr;
+    });
+  }
+
+  function removeImage(idx) {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   if (loadProduct) {
     return <div className="publish-product"><p className="publish-product-hint">Loading...</p></div>;
   }
@@ -192,6 +236,38 @@ export default function EditProduct() {
             />
             Sustainable / Recyclable
           </label>
+
+          <label>Images (ordered)</label>
+          <input
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.webp"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (files?.length) handleAddImages(files);
+              e.target.value = "";
+            }}
+          />
+          {uploadingImages && <p className="publish-product-hint">Uploading images...</p>}
+
+          {images.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10 }}>
+              {images.map((u, idx) => (
+                <div key={`${u}-${idx}`} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 6 }}>
+                  <img
+                    src={resolveMediaUrl(u)}
+                    alt={`img-${idx}`}
+                    style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 6 }}
+                  />
+                  <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
+                    <button type="button" onClick={() => moveImage(idx, idx - 1)} disabled={idx === 0}>↑</button>
+                    <button type="button" onClick={() => moveImage(idx, idx + 1)} disabled={idx === images.length - 1}>↓</button>
+                    <button type="button" onClick={() => removeImage(idx)}>Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {error && <p className="publish-product-error">{error}</p>}
           {success && <p className="publish-product-success">{success}</p>}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, authFetch } from "../api";
+import { API_BASE, authFetch, logout } from "../api";
 import "./MeProfile.css";
 
 export default function ChangePassword() {
@@ -34,8 +34,7 @@ export default function ChangePassword() {
       if (!res.ok) throw new Error(data.detail || data.message || "Update failed.");
       setSuccess("Password updated. Please sign in with your new password.");
       setTimeout(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        logout();
         navigate("/login", { replace: true });
       }, 1500);
     } catch (err) {

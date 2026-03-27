@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Request
 from pydantic import BaseModel, EmailStr
-from models.user import UserCreate, UserLogin, UserResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
+from models.user import UserCreate, UserLogin, UserResponse, SellerPublicResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
 from utils.security import (
     hash_password,
     verify_password,
@@ -428,3 +428,31 @@ async def change_password(
         {"$set": {"hashed_password": hash_password(payload.new_password)}},
     )
     return {"message": "Password updated"}
+
+
+# =====================================================
+# GET /auth/public/{user_id} - 获取卖家公开信息
+# =====================================================
+@router.get("/public/{user_id}", response_model=SellerPublicResponse)
+async def get_public_user(user_id: str):
+    """获取用户公开信息（用于卖家主页、商品详情）。"""
+    db = get_database()
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user id")
+
+    user = await db.users.find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("banned"):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return SellerPublicResponse(
+        id=str(user["_id"]),
+        username=user.get("username", ""),
+        avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
+        is_verified=bool(user.get("is_verified", False)),
+        created_at=user["created_at"],
+    )

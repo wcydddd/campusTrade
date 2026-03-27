@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, authFetch, logout } from "../api";
+import { API_BASE, authFetch, getStoredToken, logout } from "../api";
 
 /* ─── Constants & Mappings ─── */
 
@@ -10,8 +10,8 @@ const CATEGORY_TO_ENUM = {
   Furniture: "Furniture",
   Clothing: "Clothing",
   Sports: "Sports",
-  Kitchen: "Other",
-  Stationery: "Other",
+  Kitchen: "Kitchen",
+  Stationery: "Stationery",
   Other: "Other",
 };
 
@@ -129,8 +129,8 @@ export default function PublishProduct() {
   const [condition, setCondition] = useState("good");
   const [sustainable, setSustainable] = useState(false);
 
-  /* ── Manual image upload ── */
-  const [imageFile, setImageFile] = useState(null);
+  /* ── Manual image upload (multiple) ── */
+  const [imageFiles, setImageFiles] = useState([]);
   const fileInputRef = useRef(null);
 
   /* ── AI upload state ── */
@@ -231,6 +231,14 @@ export default function PublishProduct() {
     };
   }, [aiLocalPreview]);
 
+  useEffect(() => {
+    return () => {
+      imageFiles.forEach((f) => {
+        if (f?.preview) URL.revokeObjectURL(f.preview);
+      });
+    };
+  }, [imageFiles]);
+
   /* ═══ AI file selection (click / drag) ═══ */
 
   const pickAiFile = useCallback(
@@ -319,7 +327,7 @@ export default function PublishProduct() {
       const fd = new FormData();
       fd.append("file", aiFile);
 
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE}/ai/analyze`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -385,7 +393,7 @@ export default function PublishProduct() {
       const fd = new FormData();
       fd.append("file", aiFile);
 
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE}/ai/analyze-and-save`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -451,8 +459,8 @@ export default function PublishProduct() {
 
     setLoading(true);
     try {
-      /* Branch 1: AI-saved image — JSON endpoint + images */
-      if (aiImageUrl) {
+      /* Branch 1: AI-saved image only (no extra manual images) */
+      if (aiImageUrl && imageFiles.length === 0) {
         const catApi = CATEGORY_TO_ENUM[category] ?? "Other";
         const res = await authFetch(`${API_BASE}/products`, {
           method: "POST",
@@ -473,10 +481,13 @@ export default function PublishProduct() {
         return;
       }
 
-      /* Branch 2: Manual image upload — FormData endpoint */
-      if (imageFile) {
+      /* Branch 2: Manual image upload (supports appending AI image url) */
+      if (imageFiles.length > 0 || aiImageUrl) {
         const fd = new FormData();
-        fd.append("file", imageFile);
+        imageFiles.forEach((item) => fd.append("files", item.file));
+        if (aiImageUrl) {
+          fd.append("existing_images", JSON.stringify([aiImageUrl]));
+        }
         fd.append("title", t);
         fd.append("description", d);
         fd.append("price", String(p));
@@ -484,7 +495,7 @@ export default function PublishProduct() {
         fd.append("condition", condition);
         fd.append("sustainable", sustainable ? "true" : "false");
 
-        const token = localStorage.getItem("token");
+        const token = getStoredToken();
         const res = await fetch(`${API_BASE}/products/with-image`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -818,19 +829,34 @@ export default function PublishProduct() {
               Sustainable / Recyclable
             </label>
 
-            {/* Manual image upload (hidden when AI has saved an image) */}
-            {!aiImageUrl && (
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Upload image (optional, jpg / png / webp)
-                </label>
+            {/* Manual image upload */}
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Upload images (optional, jpg / png / webp)
+              </label>
+              {aiImageUrl && (
+                <p className="mb-2 text-xs text-indigo-600">
+                  AI image is already included. You can add more images below.
+                </p>
+              )}
                 <div className="flex items-center gap-3">
                   <input
                     ref={fileInputRef}
                     type="file"
+                    multiple
                     accept=".jpg,.jpeg,.png,.webp"
                     className="hidden"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files || []);
+                      if (!selected.length) return;
+                      const valid = [];
+                      for (const f of selected) {
+                        const err = validateImageFile(f);
+                        if (!err) valid.push({ file: f, preview: URL.createObjectURL(f) });
+                      }
+                      setImageFiles((prev) => [...prev, ...valid]);
+                      e.target.value = "";
+                    }}
                   />
                   <button
                     type="button"
@@ -840,11 +866,67 @@ export default function PublishProduct() {
                     Choose file
                   </button>
                   <span className="truncate text-sm text-gray-500">
-                    {imageFile ? imageFile.name : "No file chosen"}
+                    {imageFiles.length > 0 ? `${imageFiles.length} image(s) selected` : "No file chosen"}
                   </span>
                 </div>
-              </div>
-            )}
+                {imageFiles.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {imageFiles.map((item, idx) => (
+                      <div key={`${item.file.name}-${idx}`} className="rounded-lg border border-gray-200 bg-white p-2">
+                        <img
+                          src={item.preview}
+                          alt={item.file.name}
+                          className="h-24 w-full rounded object-cover"
+                        />
+                        <p className="mt-1 truncate text-xs text-gray-500">{item.file.name}</p>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
+                            disabled={idx === 0}
+                            onClick={() =>
+                              setImageFiles((prev) => {
+                                const arr = [...prev];
+                                [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                                return arr;
+                              })
+                            }
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
+                            disabled={idx === imageFiles.length - 1}
+                            onClick={() =>
+                              setImageFiles((prev) => {
+                                const arr = [...prev];
+                                [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+                                return arr;
+                              })
+                            }
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-600"
+                            onClick={() =>
+                              setImageFiles((prev) => {
+                                const target = prev[idx];
+                                if (target?.preview) URL.revokeObjectURL(target.preview);
+                                return prev.filter((_, i) => i !== idx);
+                              })
+                            }
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
 
             {/* Error & Success */}
             {error && (

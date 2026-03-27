@@ -11,6 +11,63 @@ export const WS_BASE =
     ? `ws://${window.location.host}/api`
     : (API_BASE.startsWith("http") ? API_BASE.replace(/^http/, "ws") : `ws://${window.location?.host || "127.0.0.1:5173"}/api`));
 
+const TOKEN_KEY = "token";
+const USER_KEY = "user";
+
+function getStorageCandidates() {
+  if (typeof window === "undefined") return [];
+  return [window.localStorage, window.sessionStorage];
+}
+
+function getActiveAuthStorage() {
+  if (typeof window === "undefined") return null;
+  if (window.localStorage.getItem(TOKEN_KEY)) return window.localStorage;
+  if (window.sessionStorage.getItem(TOKEN_KEY)) return window.sessionStorage;
+  if (window.localStorage.getItem(USER_KEY)) return window.localStorage;
+  if (window.sessionStorage.getItem(USER_KEY)) return window.sessionStorage;
+  return null;
+}
+
+export function getStoredToken() {
+  const active = getActiveAuthStorage();
+  if (active) return active.getItem(TOKEN_KEY);
+  return null;
+}
+
+export function getStoredUser() {
+  const active = getActiveAuthStorage();
+  if (!active) return null;
+  const raw = active.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user) {
+  const active = getActiveAuthStorage() || (typeof window !== "undefined" ? window.localStorage : null);
+  if (!active) return;
+  if (!user) {
+    active.removeItem(USER_KEY);
+    return;
+  }
+  active.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function saveAuthSession(token, user, rememberMe = false) {
+  if (typeof window === "undefined") return;
+  getStorageCandidates().forEach((storage) => {
+    storage.removeItem(TOKEN_KEY);
+    storage.removeItem(USER_KEY);
+  });
+
+  const storage = rememberMe ? window.localStorage : window.sessionStorage;
+  storage.setItem(TOKEN_KEY, token);
+  storage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 async function parseJsonSafe(res) {
   const text = await res.text();
   if (!text) return null;
@@ -40,8 +97,10 @@ export async function apiFetch(path, options = {}) {
 
 /** 清除本地登录态并派发 auth:logout（401 时自动调用，或用户点击登出时调用） */
 export function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  getStorageCandidates().forEach((storage) => {
+    storage.removeItem(TOKEN_KEY);
+    storage.removeItem(USER_KEY);
+  });
   window.dispatchEvent(new CustomEvent("auth:logout"));
 }
 
@@ -53,7 +112,7 @@ export function logout() {
  * - 若响应为 429，会尝试解析 JSON 并挂到 res._data，方便调用方拿到更友好的提示信息
  */
 export async function authFetch(url, options = {}) {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),

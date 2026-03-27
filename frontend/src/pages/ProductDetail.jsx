@@ -1,7 +1,8 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { API_BASE, authFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { redirectToLogin } from "../utils/authRedirect";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -9,9 +10,9 @@ const CATEGORY_DISPLAY = {
   家具: "Furniture",
   服饰: "Clothing",
   运动器材: "Sports",
+  Kitchen: "Kitchen",
+  Stationery: "Stationery",
   其他: "Other",
-  Kitchen: "Other",
-  Stationery: "Other",
 };
 
 // ✅ 统一补全媒体 URL
@@ -24,7 +25,8 @@ function resolveMediaUrl(url) {
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +38,10 @@ export default function ProductDetail() {
   const [reportDesc, setReportDesc] = useState("");
   const [reportMsg, setReportMsg] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [seller, setSeller] = useState(null);
+  const [shareMsg, setShareMsg] = useState("");
+  const [gallery, setGallery] = useState([]);
+  const [activeImage, setActiveImage] = useState(0);
 
   const fallbackImg =
     "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade";
@@ -73,11 +79,18 @@ export default function ProductDetail() {
           data.thumbnailUrl ||
           "";
 
-        const image =
-          resolveMediaUrl(fullRaw) ||
-          resolveMediaUrl(thumbRaw) ||
-          (data.images?.length ? resolveMediaUrl(data.images[0]) : "") ||
-          fallbackImg;
+        const imagesRaw = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
+        const galleryList = imagesRaw
+          .map((u) => resolveMediaUrl(u))
+          .filter(Boolean);
+        if (!galleryList.length) {
+          const single =
+            resolveMediaUrl(fullRaw) ||
+            resolveMediaUrl(thumbRaw) ||
+            fallbackImg;
+          galleryList.push(single);
+        }
+        const image = galleryList[0] || fallbackImg;
 
         setProduct({
           id: data.id,
@@ -89,7 +102,11 @@ export default function ProductDetail() {
           description: data.description,
           image,
           status: data.status || "available",
+          created_at: data.created_at,
+          views: data.views ?? 0,
         });
+        setGallery(galleryList);
+        setActiveImage(0);
         setFavorited(!!data.is_favorited);
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load product");
@@ -104,7 +121,35 @@ export default function ProductDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!product?.seller_id) return;
+    let cancelled = false;
+    async function fetchSeller() {
+      try {
+        const res = await authFetch(`${API_BASE}/auth/public/${product.seller_id}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setSeller({
+            id: data.id,
+            username: data.username,
+            avatar_url: data.avatar_url || "",
+          });
+        }
+      } catch (_) {}
+    }
+    fetchSeller();
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.seller_id]);
+
   async function toggleFavorite() {
+    if (!isAuthenticated) {
+      redirectToLogin(navigate, location, "Please log in first to manage favorites.");
+      return;
+    }
+
     const prev = favorited;
     setFavorited(!prev);
     try {
@@ -118,6 +163,10 @@ export default function ProductDetail() {
   }
 
   async function handleOrder() {
+    if (!isAuthenticated) {
+      redirectToLogin(navigate, location, "Please log in first to place an order.");
+      return;
+    }
     if (!window.confirm(`Place order for "${product.name}" at £${product.price}?`)) return;
     setOrdering(true);
     setOrderMsg("");
@@ -140,6 +189,10 @@ export default function ProductDetail() {
   }
 
   async function handleReport() {
+    if (!isAuthenticated) {
+      redirectToLogin(navigate, location, "Please log in first to report a product.");
+      return;
+    }
     setReporting(true);
     setReportMsg("");
     try {
@@ -160,6 +213,59 @@ export default function ProductDetail() {
     } finally {
       setReporting(false);
     }
+  }
+
+  function getShareUrl() {
+    if (typeof window === "undefined") return `${API_BASE}/products/${id}`;
+    return `${window.location.origin}/products/${id}`;
+  }
+
+  async function copyShareLink() {
+    const url = getShareUrl();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setShareMsg("Link copied");
+    } catch {
+      setShareMsg("Failed to copy link");
+    }
+    setTimeout(() => setShareMsg(""), 1800);
+  }
+
+  async function handleShare() {
+    if (!product) return;
+    const url = getShareUrl();
+    const shareData = {
+      title: product.name,
+      text: `£${product.price} · ${product.condition || "good"}`,
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareMsg("Shared");
+      } else {
+        await copyShareLink();
+        return;
+      }
+    } catch {
+      // User may cancel native share; fallback to copy for practical use
+      await copyShareLink();
+      return;
+    }
+    setTimeout(() => setShareMsg(""), 1800);
   }
 
   if (loading) {
@@ -193,7 +299,7 @@ export default function ProductDetail() {
       {/* 图片区域 */}
       <div style={{ flex: 1, minWidth: 300 }}>
         <img
-          src={product.image}
+          src={gallery[activeImage] || product.image}
           alt={product.name}
           loading="eager" // 详情页：用户就是来看商品图的
           onError={(e) => {
@@ -208,12 +314,62 @@ export default function ProductDetail() {
             objectFit: "cover",
           }}
         />
+        {gallery.length > 1 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            {gallery.map((u, idx) => (
+              <img
+                key={`${u}-${idx}`}
+                src={u}
+                alt={`thumb-${idx + 1}`}
+                onClick={() => setActiveImage(idx)}
+                style={{
+                  width: 72,
+                  height: 72,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  border: idx === activeImage ? "2px solid #4f46e5" : "1px solid #e2e8f0",
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 信息区域 */}
       <div style={{ flex: 1, minWidth: 280 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => navigate(-1)}>← Back</button>
+          <button
+            onClick={handleShare}
+            style={{
+              border: "1px solid #cbd5e1",
+              background: "#fff",
+              color: "#0f172a",
+              borderRadius: 8,
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+            title="Share this product"
+          >
+            Share
+          </button>
+          <button
+            onClick={copyShareLink}
+            style={{
+              border: "1px solid #cbd5e1",
+              background: "#fff",
+              color: "#0f172a",
+              borderRadius: 8,
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+            title="Copy product link"
+          >
+            Copy Link
+          </button>
           <button
             onClick={toggleFavorite}
             style={{
@@ -225,7 +381,11 @@ export default function ProductDetail() {
               transition: "color 0.15s, transform 0.15s",
               transform: favorited ? "scale(1.15)" : "scale(1)",
             }}
-            title={favorited ? "Remove from favorites" : "Add to favorites"}
+            title={
+              isAuthenticated
+                ? (favorited ? "Remove from favorites" : "Add to favorites")
+                : "Please log in first to manage favorites"
+            }
           >
             {favorited ? "♥" : "♡"}
           </button>
@@ -243,6 +403,35 @@ export default function ProductDetail() {
           £{product.price}
         </p>
 
+        {product.seller_id && (
+          <button
+            onClick={() => navigate(`/seller/${product.seller_id}`)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 14,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+            }}
+            title="Go to seller profile"
+          >
+            <img
+              src={seller?.avatar_url ? resolveMediaUrl(seller.avatar_url) : "https://placehold.co/40x40"}
+              alt={seller?.username || "seller"}
+              style={{ width: 40, height: 40, borderRadius: "9999px", objectFit: "cover" }}
+              onError={(e) => {
+                e.currentTarget.src = "https://placehold.co/40x40";
+              }}
+            />
+            <span style={{ fontWeight: 600, color: "#334155" }}>
+              Seller: {seller?.username || "View seller profile"}
+            </span>
+          </button>
+        )}
+
         <p style={{ marginBottom: 20 }}>
           <strong>Condition:</strong> {product.condition}
         </p>
@@ -254,6 +443,15 @@ export default function ProductDetail() {
           </p>
         )}
 
+        <p style={{ marginBottom: 12 }}>
+          <strong>Posted:</strong>{" "}
+          {product.created_at ? new Date(product.created_at).toLocaleString() : "Unknown"}
+        </p>
+
+        <p style={{ marginBottom: 20 }}>
+          <strong>Views:</strong> {product.views ?? 0}
+        </p>
+
         {product.description && (
           <p style={{ marginBottom: 20, color: "#555" }}>
             {product.description}
@@ -261,7 +459,7 @@ export default function ProductDetail() {
         )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {product.status !== "sold" && user && product.seller_id && user.id !== product.seller_id && (
+          {product.status !== "sold" && (!user || user.id !== product.seller_id) && (
             <button
               onClick={handleOrder}
               disabled={ordering}
@@ -279,9 +477,15 @@ export default function ProductDetail() {
               {ordering ? "Placing..." : "Buy Now"}
             </button>
           )}
-          {user && product.seller_id && user.id !== product.seller_id && (
+          {product.seller_id && (!user || user.id !== product.seller_id) && (
             <button
-              onClick={() => navigate(`/chat/${product.seller_id}?product=${product.id}`)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  redirectToLogin(navigate, location, "Please log in first to contact the seller.");
+                  return;
+                }
+                navigate(`/chat/${product.seller_id}?product=${product.id}`);
+              }}
               style={{
                 padding: "12px 24px",
                 fontSize: 16,
@@ -297,9 +501,19 @@ export default function ProductDetail() {
             </button>
           )}
         </div>
+        {!isAuthenticated && (
+          <p style={{ marginTop: 12, color: "#64748b", fontSize: 14 }}>
+            You are browsing as a guest. Please log in first to favorite, buy, chat, or report this product.
+          </p>
+        )}
         {orderMsg && (
           <p style={{ marginTop: 12, color: orderMsg.includes("success") ? "#16a34a" : "#ef4444", fontWeight: 600 }}>
             {orderMsg}
+          </p>
+        )}
+        {shareMsg && (
+          <p style={{ marginTop: 8, color: shareMsg.toLowerCase().includes("failed") ? "#ef4444" : "#16a34a", fontWeight: 600 }}>
+            {shareMsg}
           </p>
         )}
         {user && product.seller_id && user.id === product.seller_id && (
@@ -308,10 +522,16 @@ export default function ProductDetail() {
           </p>
         )}
 
-        {user && product.seller_id && user.id !== product.seller_id && (
+        {product.seller_id && (!user || user.id !== product.seller_id) && (
           <div style={{ marginTop: 20 }}>
             <button
-              onClick={() => setReportOpen(!reportOpen)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  redirectToLogin(navigate, location, "Please log in first to report a product.");
+                  return;
+                }
+                setReportOpen(!reportOpen);
+              }}
               style={{
                 background: "none", border: "none", color: "#94a3b8",
                 cursor: "pointer", fontSize: 13, textDecoration: "underline",
@@ -320,7 +540,7 @@ export default function ProductDetail() {
               Report this product
             </button>
 
-            {reportOpen && (
+            {isAuthenticated && reportOpen && (
               <div style={{
                 marginTop: 10, padding: 16, background: "#f8fafc",
                 borderRadius: 10, border: "1px solid #e2e8f0",

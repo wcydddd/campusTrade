@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from utils.database import get_database
 from utils.security import get_current_user
 from models.notification import NotificationResponse
+from pymongo.errors import DuplicateKeyError
 
 
 class ReadByLinkBody(BaseModel):
@@ -175,6 +176,7 @@ async def create_notification(
     title: str,
     body: str,
     link: Optional[str] = None,
+    meta: Optional[dict] = None,
 ):
     """
     Insert a notification into the DB and push it to the user via WebSocket
@@ -190,9 +192,14 @@ async def create_notification(
         "body": body,
         "read": False,
         "link": link,
+        "meta": meta or {},
         "created_at": now,
     }
-    result = await db.notifications.insert_one(doc)
+    try:
+        result = await db.notifications.insert_one(doc)
+    except DuplicateKeyError:
+        # Deduplicated by unique index (e.g. same price-drop event)
+        return None
 
     unread = await db.notifications.count_documents({
         "user_id": ObjectId(user_id),

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
-import { API_BASE } from "../api";
+import { API_BASE, getStoredToken, saveAuthSession } from "../api";
 
 export default function Login() {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
   if (token) return <Navigate to="/home" replace />;
 
   // 表单状态
@@ -62,8 +62,7 @@ export default function Login() {
       if (!res.ok) {
         throw new Error(data.detail || data.message || "Login failed");
       }
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      saveAuthSession(data.access_token, data.user, rememberMe);
       window.dispatchEvent(new CustomEvent("auth:login"));
       navigate(from, { replace: true });
     } catch (err) {

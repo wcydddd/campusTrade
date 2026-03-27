@@ -1,10 +1,10 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getMe } from "../api";
+import { getMe, getStoredToken, getStoredUser, logout, setStoredUser } from "../api";
 
 export default function ProtectedRoute({ children, requireVerified = false }) {
   const location = useLocation();
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   const [checking, setChecking] = useState(true);
   const [ok, setOk] = useState(false);
@@ -28,7 +28,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
         if (cancelled) return;
 
         // 存一份给页面用（Home/logout 也会清）
-        localStorage.setItem("user", JSON.stringify(me));
+        setStoredUser(me);
 
         if (requireVerified && me?.is_verified === false) {
           setBlockedByVerify(true);
@@ -39,8 +39,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
         }
       } catch (e) {
         // token 无效/过期：自动登出
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        logout();
         if (!cancelled) setOk(false);
       } finally {
         if (!cancelled) setChecking(false);
@@ -63,7 +62,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
     // 未验证：引导去 verify-email（把 email 带上更友好）
     let email = "";
     try {
-      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      const u = getStoredUser() || {};
       email = u?.email || "";
     } catch {}
     const to = email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email";

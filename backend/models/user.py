@@ -43,6 +43,15 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class SellerPublicResponse(BaseModel):
+    id: str
+    username: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_verified: bool
+    created_at: datetime
+
+
 class ProfileUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=2, max_length=30)
     bio: Optional[str] = Field(None, max_length=500)

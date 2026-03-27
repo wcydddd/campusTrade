@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { WS_BASE } from "../api";
+import { WS_BASE, getStoredToken } from "../api";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const PONG_TIMEOUT_MS = 10_000;
@@ -35,7 +35,7 @@ export default function useWebSocket(path = "/ws") {
   const connectFnRef = useRef(null);
 
   connectFnRef.current = () => {
-    const token = localStorage.getItem("token");
+    const token = getStoredToken();
     if (!token || !alive.current) return;
 
     // Detach old WS so its onclose won't trigger reconnect
@@ -133,7 +133,7 @@ export default function useWebSocket(path = "/ws") {
     alive.current = true;
     closedByUser.current = false;
 
-    if (localStorage.getItem("token")) connect();
+    if (getStoredToken()) connect();
 
     const onLogin = () => {
       closedByUser.current = false;

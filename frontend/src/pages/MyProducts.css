@@ -41,6 +41,18 @@
   color: #c00;
 }
 
+.my-products-section {
+  max-width: 900px;
+  margin: 0 auto 20px;
+}
+
+.my-products-section-title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: #0f172a;
+  font-weight: 700;
+}
+
 .my-products-list {
   max-width: 900px;
   margin: 0 auto;
@@ -128,4 +140,18 @@
 
 .my-products-btn-delete:hover {
   background: #fee2e2;
+}
+
+.my-products-btn-boost {
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.my-products-btn-boost:hover {
+  background: #cffafe;
+}
+
+.my-products-btn-boost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

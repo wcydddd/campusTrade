@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { getStoredUser } from "../api";
 
 /**
  * Only users with role === 'admin' can access. Otherwise redirect to /home.
@@ -8,11 +9,8 @@ export default function AdminRoute({ children }) {
   const location = useLocation();
   let role = "";
   try {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      role = user.role || "";
-    }
+    const user = getStoredUser();
+    role = user?.role || "";
   } catch (_) {}
 
   if (role !== "admin" && role !== "moderator") {

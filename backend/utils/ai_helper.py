@@ -2,6 +2,7 @@ import json
 
 import openai
 import base64
+import re
 from config import settings
 
 # Use async client to avoid sync connection errors in FastAPI async event loop
@@ -47,8 +48,8 @@ Respond in this exact JSON format:
 
 Only respond with the JSON, no other text."""
 
-    try:
-        response = await client.chat.completions.create(
+    async def _call_once():
+        return await client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -66,32 +67,66 @@ Only respond with the JSON, no other text."""
             ],
             max_tokens=500
         )
-        
-        # Parse returned JSON
-        result_text = response.choices[0].message.content.strip()
-        
+
+    def _try_parse_result_text(result_text: str):
+        if not result_text:
+            raise json.JSONDecodeError("empty response", "", 0)
+
+        cleaned = result_text.strip()
+
         # Strip possible markdown formatting
-        if result_text.startswith("```"):
-            result_text = result_text.split("```")[1]
-            if result_text.startswith("json"):
-                result_text = result_text[4:]
-        result_text = result_text.strip()
-        
-        result = json.loads(result_text)
-        
-        # Verify category is in the list
-        if result.get("category") not in CATEGORIES:
-            result["category"] = "Other"
-        
-        return {
-            "success": True,
-            "data": result
-        }
-        
-    except json.JSONDecodeError as e:
+        if cleaned.startswith("```"):
+            parts = cleaned.split("```")
+            if len(parts) >= 2:
+                cleaned = parts[1]
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+        # First try: parse as whole JSON
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: extract first JSON object from text
+        m = re.search(r"\{[\s\S]*\}", cleaned)
+        if m:
+            return json.loads(m.group(0))
+
+        raise json.JSONDecodeError("no json object found", cleaned, 0)
+
+    try:
+        last_err = None
+        for _ in range(2):  # retry once for occasional malformed outputs
+            try:
+                response = await _call_once()
+                content = response.choices[0].message.content
+                if isinstance(content, str):
+                    result_text = content
+                elif isinstance(content, list):
+                    texts = [c.get("text", "") for c in content if isinstance(c, dict)]
+                    result_text = "".join(texts)
+                else:
+                    result_text = ""
+
+                result = _try_parse_result_text(result_text)
+
+                # Verify category is in the list
+                if result.get("category") not in CATEGORIES:
+                    result["category"] = "Other"
+
+                return {
+                    "success": True,
+                    "data": result
+                }
+            except json.JSONDecodeError as e:
+                last_err = e
+                continue
+
         return {
             "success": False,
-            "error": f"Failed to parse AI response: {str(e)}"
+            "error": f"Failed to parse AI response: {str(last_err)}"
         }
     except Exception as e:
         return {

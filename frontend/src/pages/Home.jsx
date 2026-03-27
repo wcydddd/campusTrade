@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { API_BASE, authFetch, logout } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useUnread } from "../context/UnreadContext";
 import NotificationBell from "../components/NotificationBell";
+import { redirectToLogin } from "../utils/authRedirect";
 import "./Home.css";
 
 function buildQuery(params) {
@@ -28,12 +29,13 @@ function resolveMediaUrl(url) {
 
 function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [apiCategories, setApiCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAuthenticated, loading: authLoading } = useAuth();
   const [trending, setTrending] = useState([]);
   const { unreadCount } = useUnread();
 
@@ -202,6 +204,10 @@ function Home() {
     navigate("/login");
   }
 
+  function requireLogin(message) {
+    redirectToLogin(navigate, location, message);
+  }
+
   return (
     <div className="home">
       <div className="home-header">
@@ -273,79 +279,111 @@ function Home() {
         </div>
 
         <div className="home-header-actions">
-          <div className="me-dropdown" ref={meMenuRef}>
-            <button
-              type="button"
-              className="me-link me-link-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMeMenuOpen((v) => !v);
-              }}
-            >
-              Me{" "}
-              <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
-                ▼
-              </span>
-            </button>
+          {!authLoading && !isAuthenticated && (
+            <>
+              <button
+                type="button"
+                className="publish-link"
+                onClick={() => requireLogin("Please log in first to publish a product.")}
+              >
+                Publish product
+              </button>
+              <Link to="/login" className="messages-link">
+                Login
+              </Link>
+              <Link to="/register" className="publish-link">
+                Register
+              </Link>
+            </>
+          )}
 
-            {meMenuOpen && (
-              <ul className="me-dropdown-menu">
-                <li>
-                  <Link to="/me" onClick={() => setMeMenuOpen(false)}>
-                    My profile
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/my-products" onClick={() => setMeMenuOpen(false)}>
-                    Manage my products
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/my-orders" onClick={() => setMeMenuOpen(false)}>
-                    My orders
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/my-favorites" onClick={() => setMeMenuOpen(false)}>
-                    My favorites
-                  </Link>
-                </li>
-                {currentUser?.role === "admin" && (
-                  <>
+          {isAuthenticated && (
+            <>
+              <div className="me-dropdown" ref={meMenuRef}>
+                <button
+                  type="button"
+                  className="me-link me-link-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMeMenuOpen((v) => !v);
+                  }}
+                >
+                  Me{" "}
+                  <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
+                    ▼
+                  </span>
+                </button>
+
+                {meMenuOpen && (
+                  <ul className="me-dropdown-menu">
                     <li>
-                      <Link to="/admin/review" onClick={() => setMeMenuOpen(false)}>
-                        Product review
+                      <Link to="/me" onClick={() => setMeMenuOpen(false)}>
+                        My profile
                       </Link>
                     </li>
                     <li>
-                      <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
-                        User management
+                      <Link to="/my-products" onClick={() => setMeMenuOpen(false)}>
+                        Manage my products
                       </Link>
                     </li>
-                  </>
+                    <li>
+                      <Link to="/my-orders" onClick={() => setMeMenuOpen(false)}>
+                        My orders
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/my-favorites" onClick={() => setMeMenuOpen(false)}>
+                        My favorites
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/my-reviews" onClick={() => setMeMenuOpen(false)}>
+                        My reviews
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/recent-viewed" onClick={() => setMeMenuOpen(false)}>
+                        Recently viewed
+                      </Link>
+                    </li>
+                    {currentUser?.role === "admin" && (
+                      <>
+                        <li>
+                          <Link to="/admin/review" onClick={() => setMeMenuOpen(false)}>
+                            Product review
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/admin/users" onClick={() => setMeMenuOpen(false)}>
+                            User management
+                          </Link>
+                        </li>
+                      </>
+                    )}
+                  </ul>
                 )}
-              </ul>
-            )}
-          </div>
+              </div>
 
-          <NotificationBell />
+              <NotificationBell />
 
-          <Link to="/conversations" className="messages-link">
-            Messages
-            {unreadCount > 0 && (
-              <span className="unread-badge">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </Link>
+              <Link to="/conversations" className="messages-link">
+                Messages
+                {unreadCount > 0 && (
+                  <span className="unread-badge">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
 
-          <Link to="/publish" className="publish-link">
-            Publish product
-          </Link>
+              <Link to="/publish" className="publish-link">
+                Publish product
+              </Link>
 
-          <button className="logout-btn" onClick={handleLogout}>
-            Log out
-          </button>
+              <button className="logout-btn" onClick={handleLogout}>
+                Log out
+              </button>
+            </>
+          )}
         </div>
       </div>
 

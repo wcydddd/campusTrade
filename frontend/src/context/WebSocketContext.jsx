@@ -5,8 +5,8 @@ const WebSocketContext = createContext(null);
 
 /**
  * Wraps the entire app so that a single WebSocket connection is shared
- * across all components.  Place this inside AuthProvider (it reads the
- * token from localStorage and listens for auth:login / auth:logout).
+ * across all components. Place this inside AuthProvider so it can
+ * react to the shared auth storage and auth:login / auth:logout events.
  */
 export function WebSocketProvider({ children }) {
   const ws = useWebSocket("/ws");

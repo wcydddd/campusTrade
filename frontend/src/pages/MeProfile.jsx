@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, authFetch } from "../api";
+import { API_BASE, authFetch, getStoredToken, logout } from "../api";
 import "./MeProfile.css";
 
 export default function MeProfile() {
@@ -43,7 +43,7 @@ export default function MeProfile() {
     try {
       const formData = new FormData();
       formData.append("file", avatarFile);
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE}/auth/me/avatar`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -83,8 +83,7 @@ export default function MeProfile() {
   }
 
   function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    logout();
     navigate("/login", { replace: true });
   }
 
