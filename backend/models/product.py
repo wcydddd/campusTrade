@@ -10,7 +10,7 @@ class PyObjectId(ObjectId):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, info=None):  # 更新
+    def validate(cls, v, info=None):
         if isinstance(v, ObjectId):
             return v
         if not ObjectId.is_valid(v):
@@ -18,26 +18,31 @@ class PyObjectId(ObjectId):
         return ObjectId(v)
 
 class ProductCategory(str, Enum):
-    TEXTBOOKS = "教材"
-    ELECTRONICS = "电子产品"
-    FURNITURE = "家具"
-    CLOTHING = "服饰"
-    SPORTS = "运动器材"
-    OTHER = "其他"
+    TEXTBOOKS = "Textbooks"
+    ELECTRONICS = "Electronics"
+    FURNITURE = "Furniture"
+    CLOTHING = "Clothing"
+    SPORTS = "Sports"
+    KITCHEN = "Kitchen"
+    STATIONERY = "Stationery"
+    OTHER = "Other"
 
 class ProductStatus(str, Enum):
+    PENDING = "pending"
     AVAILABLE = "available"
     RESERVED = "reserved"
     SOLD = "sold"
+    REMOVED = "removed"
+    REJECTED = "rejected"
 
 class ProductBase(BaseModel):
     title: str
     description: str
     price: float
     category: ProductCategory
-    condition: str  # "全新", "9成新", "7成新" etc.
-    sustainable: bool = False  # 可循环这一块
-    images: List[str] = []
+    condition: str
+    sustainable: bool = False
+    images: List[str] = Field(default_factory=list)
 
 class ProductCreate(ProductBase):
     pass
@@ -45,8 +50,9 @@ class ProductCreate(ProductBase):
 class ProductInDB(ProductBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     seller_id: PyObjectId
-    status: ProductStatus = ProductStatus.AVAILABLE
+    status: ProductStatus = ProductStatus.PENDING
     views: int = 0
+    boosted_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -67,8 +73,11 @@ class ProductResponse(BaseModel):
     seller_id: str
     status: str
     views: int
+    boosted_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime  # 更新
+    updated_at: datetime
+    thumb_url: Optional[str] = None
+    is_favorited: Optional[bool] = None
 
     class Config:
         from_attributes = True

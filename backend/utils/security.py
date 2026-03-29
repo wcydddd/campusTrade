@@ -2,19 +2,30 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# bcrypt 对密码有 72 字节限制，超出会报错
+MAX_BCRYPT_BYTES = 72
+
 # JWT Bearer
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
-    """加密密码"""
+    """加密密码，超出 bcrypt 长度限制时返回 400 而不是 500"""
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > MAX_BCRYPT_BYTES:
+        # 提示用户密码太长，避免后端抛 ValueError
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is too long. Please use a shorter password (avoid very long or complex characters).",
+        )
     return pwd_context.hash(password)
 
 
@@ -63,6 +74,43 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return {"user_id": user_id, "email": payload.get("email")}
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+) -> Optional[dict]:
+    """Return current user dict if a valid token is present, else None (no 401)."""
+    if credentials is None:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return {"user_id": user_id, "email": payload.get("email")}
+    except Exception:
+        return None
+
+
+async def get_current_admin_user(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """要求当前用户为 admin，否则 403"""
+    from utils.database import get_database
+    from bson import ObjectId
+
+    try:
+        uid = ObjectId(current_user["user_id"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid user id")
+
+    db = get_database()
+    user = await db.users.find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    return {"user_id": str(uid), "email": user.get("email")}
 
 
 def is_valid_university_email(email: str) -> bool:

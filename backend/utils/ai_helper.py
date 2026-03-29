@@ -1,11 +1,14 @@
+import json
+
 import openai
 import base64
+import re
 from config import settings
 
-# 设置 OpenAI API Key
-client = openai.OpenAI(api_key=settings.openai_api_key)
+# Use async client to avoid sync connection errors in FastAPI async event loop
+client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
-# 商品分类列表
+# Product category list
 CATEGORIES = [
     "Electronics",
     "Textbooks", 
@@ -19,14 +22,14 @@ CATEGORIES = [
 
 async def analyze_image(image_data: bytes) -> dict:
     """
-    使用 GPT-4 Vision 分析商品图片
-    返回: {"title": "...", "description": "...", "category": "...", "keywords": [...]}
+    Analyze product image using GPT-4 Vision
+    Returns: {"title": "...", "description": "...", "category": "...", "keywords": [...]}
     """
     
-    # 将图片转为 base64
+    # Convert image to base64
     base64_image = base64.b64encode(image_data).decode("utf-8")
     
-    # 构建 prompt
+    # Build prompt
     prompt = f"""Analyze this product image for a campus second-hand marketplace.
 
 Please provide:
@@ -45,8 +48,8 @@ Respond in this exact JSON format:
 
 Only respond with the JSON, no other text."""
 
-    try:
-        response = client.chat.completions.create(
+    async def _call_once():
+        return await client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -64,33 +67,66 @@ Only respond with the JSON, no other text."""
             ],
             max_tokens=500
         )
-        
-        # 解析返回的 JSON
-        result_text = response.choices[0].message.content.strip()
-        
-        # 清理可能的 markdown 格式
-        if result_text.startswith("```"):
-            result_text = result_text.split("```")[1]
-            if result_text.startswith("json"):
-                result_text = result_text[4:]
-        result_text = result_text.strip()
-        
-        import json
-        result = json.loads(result_text)
-        
-        # 验证 category 是否在列表中
-        if result.get("category") not in CATEGORIES:
-            result["category"] = "Other"
-        
-        return {
-            "success": True,
-            "data": result
-        }
-        
-    except json.JSONDecodeError as e:
+
+    def _try_parse_result_text(result_text: str):
+        if not result_text:
+            raise json.JSONDecodeError("empty response", "", 0)
+
+        cleaned = result_text.strip()
+
+        # Strip possible markdown formatting
+        if cleaned.startswith("```"):
+            parts = cleaned.split("```")
+            if len(parts) >= 2:
+                cleaned = parts[1]
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+        # First try: parse as whole JSON
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: extract first JSON object from text
+        m = re.search(r"\{[\s\S]*\}", cleaned)
+        if m:
+            return json.loads(m.group(0))
+
+        raise json.JSONDecodeError("no json object found", cleaned, 0)
+
+    try:
+        last_err = None
+        for _ in range(2):  # retry once for occasional malformed outputs
+            try:
+                response = await _call_once()
+                content = response.choices[0].message.content
+                if isinstance(content, str):
+                    result_text = content
+                elif isinstance(content, list):
+                    texts = [c.get("text", "") for c in content if isinstance(c, dict)]
+                    result_text = "".join(texts)
+                else:
+                    result_text = ""
+
+                result = _try_parse_result_text(result_text)
+
+                # Verify category is in the list
+                if result.get("category") not in CATEGORIES:
+                    result["category"] = "Other"
+
+                return {
+                    "success": True,
+                    "data": result
+                }
+            except json.JSONDecodeError as e:
+                last_err = e
+                continue
+
         return {
             "success": False,
-            "error": f"Failed to parse AI response: {str(e)}"
+            "error": f"Failed to parse AI response: {str(last_err)}"
         }
     except Exception as e:
         return {
@@ -100,5 +136,5 @@ Only respond with the JSON, no other text."""
 
 
 def get_categories() -> list:
-    """返回所有可用的商品分类"""
+    """Return all available product categories"""
     return CATEGORIES

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Request
 from pydantic import BaseModel, EmailStr
-from models.user import UserCreate, UserLogin, UserResponse, TokenResponse
+from models.user import UserCreate, UserLogin, UserResponse, SellerPublicResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
 from utils.security import (
     hash_password,
     verify_password,
@@ -9,8 +9,16 @@ from utils.security import (
     is_valid_university_email
 )
 from utils.database import get_database
-from utils.otp import generate_numeric_code, hash_code      # ✅ 新增：验证码生成 & hash
-from utils.email import send_verification_code              # ✅ 新增：SMTP 发验证码
+from utils.otp import generate_numeric_code, hash_code
+from utils.email import send_verification_code
+from utils.rate_limiter import (
+    check_rate_limit,
+    check_login_lockout,
+    record_login_failure,
+    reset_login_failures,
+    LOGIN_MAX_FAILURES,
+)
+from utils.security_logger import log_security_event
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 
@@ -42,12 +50,13 @@ class VerifyCodeRequest(BaseModel):
 # ✅ 方案A：注册（不返回 token）
 # =====================================================
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, request: Request):
     """
     注册（方案A）：
     - 创建用户并设置 is_verified=False
     - 不返回 token（必须先邮箱验证成功，才能 login 获取 token）
     """
+    await check_rate_limit(request, scope="register", max_hits=5, window_seconds=60)
     db = get_database()
 
     email = user_data.email.lower()
@@ -59,12 +68,18 @@ async def register(user_data: UserCreate):
             detail="Please use a university email address"
         )
 
-    # 2) 邮箱唯一
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # 2) 邮箱检查：已验证的不允许重复注册；未验证的允许覆盖
+    existing_user = await db.users.find_one({"email": email})
+    if existing_user:
+        if existing_user.get("is_verified", False):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        # 未验证：删除旧记录，允许重新注册
+        await db.users.delete_one({"_id": existing_user["_id"]})
+        await db.email_verifications.delete_many({"email": email})
 
-    # 3) 用户名唯一
-    if await db.users.find_one({"username": user_data.username}):
+    # 3) 用户名唯一（排除刚被删掉的同一邮箱旧记录）
+    existing_username = await db.users.find_one({"username": user_data.username})
+    if existing_username:
         raise HTTPException(status_code=400, detail="Username already taken")
 
     # 4) 插入用户
@@ -74,12 +89,14 @@ async def register(user_data: UserCreate):
         "username": user_data.username,
         "hashed_password": hash_password(user_data.password),
         "role": "user",
-        "is_verified": False,      # ✅ 关键：邮箱验证后才改 True
+        "is_verified": False,
         "avatar_url": None,
         "created_at": now
     }
 
     result = await db.users.insert_one(new_user)
+
+    await log_security_event("register", email=email, user_id=str(result.inserted_id), request=request)
 
     return UserResponse(
         id=str(result.inserted_id),
@@ -96,15 +113,16 @@ async def register(user_data: UserCreate):
 # ✅ 发送验证码（人员验证第 1 步）
 # =====================================================
 @router.post("/send-verification-code")
-async def send_email_code(req: SendCodeRequest):
+async def send_email_code(req: SendCodeRequest, request: Request):
     """
     发送邮箱验证码：
     1) 校验学校邮箱
     2) 必须已注册用户才可发送
     3) 已验证的不再发送
-    4) 冷却时间限制防刷
+    4) 冷却时间限制防刷（IP + 邮箱）
     5) 生成验证码 -> hash 入库（不存明文）-> 发邮件
     """
+    await check_rate_limit(request, scope="otp_send", max_hits=5, window_seconds=300, user_key=req.email.lower())
     db = get_database()
     email = req.email.lower()
 
@@ -154,7 +172,11 @@ async def send_email_code(req: SendCodeRequest):
     )
 
     # 7) 发邮件（明文验证码只通过邮件发给用户）
-    await send_verification_code(email=email, code=code)
+    try:
+        await send_verification_code(email=email, code=code)
+    except Exception as e:
+        print(f"[email] Send failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
     return {"message": "Verification code sent"}
 
@@ -163,12 +185,13 @@ async def send_email_code(req: SendCodeRequest):
 # ✅ 校验验证码（人员验证第 2 步）
 # =====================================================
 @router.post("/verify-email")
-async def verify_email(req: VerifyCodeRequest):
+async def verify_email(req: VerifyCodeRequest, request: Request):
     """
     校验验证码：
     - 成功后：users.is_verified = True
     - 不返回 token（方案A：token 由 /auth/login 发）
     """
+    await check_rate_limit(request, scope="otp_verify", max_hits=10, window_seconds=300, user_key=req.email.lower())
     db = get_database()
     email = req.email.lower()
     code = req.code.strip()
@@ -221,27 +244,46 @@ async def verify_email(req: VerifyCodeRequest):
 # ✅ 登录（必须 is_verified=True 才发 token）
 # =====================================================
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin):
+async def login(user_data: UserLogin, request: Request):
     """用户登录（方案A：必须完成邮箱验证才允许登录）"""
+    await check_rate_limit(request, scope="login", max_hits=10, window_seconds=60, user_key=user_data.email.lower())
+
     db = get_database()
     email = user_data.email.lower()
+
+    # 0) 检查是否因多次失败被锁定
+    await check_login_lockout(db, email)
 
     # 1) 查找用户
     user = await db.users.find_one({"email": email})
     if not user:
+        await log_security_event("login_failure", email=email, request=request, detail="User not found")
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # 2) 未验证邮箱：禁止登录
     if user.get("is_verified") is False:
         raise HTTPException(status_code=403, detail="Email not verified. Please verify your email first.")
 
+    # 2b) 封禁用户禁止登录
+    if user.get("banned"):
+        await log_security_event("login_failure", email=email, request=request, detail="Account banned")
+        raise HTTPException(status_code=403, detail="Account is banned.")
+
     # 3) 验证密码
     if not verify_password(user_data.password, user["hashed_password"]):
+        from utils.rate_limiter import _get_client_ip
+        ip = _get_client_ip(request)
+        failures = await record_login_failure(db, email, ip)
+        await log_security_event("login_failure", email=email, request=request, detail=f"Wrong password (attempt {failures})")
+        if failures >= LOGIN_MAX_FAILURES:
+            await log_security_event("login_lockout", email=email, request=request, detail=f"Locked after {failures} failures")
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # 4) 生成 token
+    # 4) 登录成功 → 清除失败记录
+    await reset_login_failures(db, email)
     user_id = str(user["_id"])
     access_token = create_access_token(data={"sub": user_id, "email": user["email"]})
+    await log_security_event("login_success", email=email, user_id=user_id, request=request)
 
     # 5) 返回 token + user
     user_response = UserResponse(
@@ -251,6 +293,7 @@ async def login(user_data: UserLogin):
         role=user["role"],
         is_verified=user["is_verified"],
         avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
         created_at=user["created_at"]
     )
 
@@ -276,5 +319,140 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         role=user["role"],
         is_verified=user["is_verified"],
         avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
         created_at=user["created_at"]
+    )
+
+
+# =====================================================
+# PATCH /auth/me - 更新个人资料（昵称、简介）
+# =====================================================
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: ProfileUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    db = get_database()
+    uid = ObjectId(current_user["user_id"])
+    update_data = payload.model_dump(exclude_unset=True)
+    if not update_data:
+        user = await db.users.find_one({"_id": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return UserResponse(
+            id=str(user["_id"]),
+            email=user["email"],
+            username=user["username"],
+            role=user["role"],
+            is_verified=user["is_verified"],
+            avatar_url=user.get("avatar_url"),
+            bio=user.get("bio"),
+            created_at=user["created_at"]
+        )
+    if "username" in update_data:
+        existing = await db.users.find_one({"username": update_data["username"], "_id": {"$ne": uid}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+    await db.users.update_one({"_id": uid}, {"$set": update_data})
+    user = await db.users.find_one({"_id": uid})
+    return UserResponse(
+        id=str(user["_id"]),
+        email=user["email"],
+        username=user["username"],
+        role=user["role"],
+        is_verified=user["is_verified"],
+        avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
+        created_at=user["created_at"]
+    )
+
+
+# =====================================================
+# POST /auth/me/avatar - 上传头像
+# =====================================================
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    import uuid
+    from pathlib import Path
+    from config import settings
+
+    ext = (file.filename or "").split(".")[-1].lower()
+    if ext not in ("jpg", "jpeg", "png", "webp"):
+        raise HTTPException(status_code=400, detail="Allowed: jpg, png, webp")
+    content = await file.read()
+    if len(content) > (settings.max_upload_size_mb * 1024 * 1024):
+        raise HTTPException(status_code=400, detail=f"Max size {settings.max_upload_size_mb}MB")
+    upload_dir = Path(settings.upload_dir)
+    upload_dir.mkdir(exist_ok=True)
+    name = f"{uuid.uuid4()}.{ext}"
+    path = upload_dir / name
+    with open(path, "wb") as f:
+        f.write(content)
+    avatar_url = f"/uploads/{name}"
+    db = get_database()
+    uid = ObjectId(current_user["user_id"])
+    await db.users.update_one({"_id": uid}, {"$set": {"avatar_url": avatar_url}})
+    user = await db.users.find_one({"_id": uid})
+    return UserResponse(
+        id=str(user["_id"]),
+        email=user["email"],
+        username=user["username"],
+        role=user["role"],
+        is_verified=user["is_verified"],
+        avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
+        created_at=user["created_at"]
+    )
+
+
+# =====================================================
+# POST /auth/change-password - 修改密码
+# =====================================================
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    db = get_database()
+    uid = ObjectId(current_user["user_id"])
+    user = await db.users.find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(payload.old_password, user["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Current password is wrong")
+    await db.users.update_one(
+        {"_id": uid},
+        {"$set": {"hashed_password": hash_password(payload.new_password)}},
+    )
+    return {"message": "Password updated"}
+
+
+# =====================================================
+# GET /auth/public/{user_id} - 获取卖家公开信息
+# =====================================================
+@router.get("/public/{user_id}", response_model=SellerPublicResponse)
+async def get_public_user(user_id: str):
+    """获取用户公开信息（用于卖家主页、商品详情）。"""
+    db = get_database()
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user id")
+
+    user = await db.users.find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("banned"):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return SellerPublicResponse(
+        id=str(user["_id"]),
+        username=user.get("username", ""),
+        avatar_url=user.get("avatar_url"),
+        bio=user.get("bio"),
+        is_verified=bool(user.get("is_verified", False)),
+        created_at=user["created_at"],
     )
