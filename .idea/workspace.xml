@@ -1,36 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="89610424-0ff3-4ae7-acbf-feb422630c96" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/notification.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models/notification.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/product.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models/product.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models/user.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/notifications.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/orders.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/orders.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/products.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/products.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/utils/ai_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/utils/ai_helper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/AdminRoute.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AdminRoute.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/uploads/60f34a3f-6e36-4c06-bc30-840ae4bbf32c.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/NotificationBell.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/NotificationBell.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductCard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProtectedRoute.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProtectedRoute.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/context/WebSocketContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/WebSocketContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useWebSocket.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useWebSocket.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ChangePassword.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ChangePassword.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/EditProduct.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/EditProduct.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductCard.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductCard.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MeProfile.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MeProfile.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrders.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrders.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyProducts.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyProducts.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyProducts.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyProducts.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/PublishProduct.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/PublishProduct.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,17 +41,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;version3&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/wcy/Documents/GitHub/campusTrade&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "version3",
+    "last_opened_file_path": "/Users/wcy/Documents/GitHub/campusTrade",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -91,6 +76,7 @@
       <workItem from="1770235589981" duration="59000" />
       <workItem from="1773579264935" duration="22000" />
       <workItem from="1774631653631" duration="19000" />
+      <workItem from="1774812338777" duration="683000" />
     </task>
     <servers />
   </component>

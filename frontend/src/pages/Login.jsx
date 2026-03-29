@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { API_BASE, getStoredToken, saveAuthSession } from "../api";
+import campusTradeLogo from "../assets/uol-secondhand-logo.png";
 
 export default function Login() {
   const token = getStoredToken();
@@ -75,13 +76,14 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="mx-auto h-12 w-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
-          <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-          </svg>
+        <div className="flex justify-center mb-2">
+          <img
+            src={campusTradeLogo}
+            alt="CampusTrade logo"
+            className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10"
+          />
         </div>
-        <h2 className="mt-4 text-3xl font-extrabold text-gray-900 tracking-tight">CampusTrade</h2>
+        <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">CampusTrade</h2>
         <p className="mt-2 text-sm text-gray-600">Sign in to access your campus marketplace</p>
       </div>
 

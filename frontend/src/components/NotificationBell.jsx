@@ -20,7 +20,7 @@ const ICON_EMOJI = {
   system: "\u{1F514}",
 };
 
-export default function NotificationBell() {
+export default function NotificationBell({ variant = "default" }) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWs();
@@ -147,32 +147,97 @@ export default function NotificationBell() {
 
   if (!isAuthenticated) return null;
 
+  const isNav = variant === "nav";
+  const isUtility = variant === "utility";
+  const buttonStyle = isUtility
+    ? {
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: 10,
+        width: "100%",
+        minHeight: 52,
+        padding: "14px 16px",
+        borderRadius: 16,
+        border: "1px solid rgba(148, 163, 184, 0.16)",
+        background: "rgba(255, 255, 255, 0.92)",
+        color: "#0f172a",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        transition: "background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s",
+        boxShadow: "0 10px 22px rgba(15, 23, 42, 0.05)",
+      }
+    : isNav
+    ? {
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        minHeight: 46,
+        padding: "11px 16px",
+        borderRadius: 14,
+        border: "1px solid rgba(148, 163, 184, 0.18)",
+        background: "#fff",
+        color: "#0f172a",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        transition: "background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s",
+        boxShadow: "0 8px 18px rgba(15, 23, 42, 0.05)",
+      }
+    : {
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        padding: "10px 16px",
+        borderRadius: 12,
+        border: "none",
+        background: "#0f172a",
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: 500,
+        cursor: "pointer",
+        transition: "background 0.2s",
+      };
+
   return (
-    <div ref={panelRef} style={{ position: "relative" }}>
+    <div ref={panelRef} style={{ position: "relative", width: isUtility ? "100%" : "auto" }}>
       {/* ── Bell button ── */}
       <button
         type="button"
         onClick={toggle}
         aria-label="Notifications"
         title={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
-        style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          padding: "10px 16px",
-          borderRadius: 12,
-          border: "none",
-          background: "#0f172a",
-          color: "#fff",
-          fontSize: 14,
-          fontWeight: 500,
-          cursor: "pointer",
-          transition: "background 0.2s",
+        style={buttonStyle}
+        onMouseEnter={(e) => {
+          if (isNav || isUtility) {
+            e.currentTarget.style.background = "#f8fafc";
+            e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.22)";
+            e.currentTarget.style.boxShadow = "0 14px 28px rgba(15, 23, 42, 0.08)";
+            e.currentTarget.style.transform = "translateY(-1px)";
+          } else {
+            e.currentTarget.style.background = "#1e293b";
+          }
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#1e293b")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#0f172a")}
+        onMouseLeave={(e) => {
+          if (isNav || isUtility) {
+            e.currentTarget.style.background = isUtility ? "rgba(255, 255, 255, 0.92)" : "#fff";
+            e.currentTarget.style.borderColor = isUtility
+              ? "rgba(148, 163, 184, 0.16)"
+              : "rgba(148, 163, 184, 0.18)";
+            e.currentTarget.style.boxShadow = isUtility
+              ? "0 10px 22px rgba(15, 23, 42, 0.05)"
+              : "0 8px 18px rgba(15, 23, 42, 0.05)";
+            e.currentTarget.style.transform = "translateY(0)";
+          } else {
+            e.currentTarget.style.background = "#0f172a";
+          }
+        }}
       >
         {/* Bell SVG */}
         <svg
@@ -193,19 +258,20 @@ export default function NotificationBell() {
           <span
             style={{
               position: "absolute",
-              top: -6,
-              right: -8,
-              minWidth: 18,
-              height: 18,
-              padding: "0 5px",
-              borderRadius: 9,
+              top: -5,
+              right: -5,
+              minWidth: 20,
+              height: 20,
+              padding: "0 6px",
+              borderRadius: 999,
               background: "#ef4444",
               color: "#fff",
               fontSize: 11,
               fontWeight: 700,
-              lineHeight: "18px",
+              lineHeight: "20px",
               textAlign: "center",
               pointerEvents: "none",
+              border: "2px solid #fff",
             }}
           >
             {unread > 99 ? "99+" : unread}
