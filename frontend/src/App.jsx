@@ -35,18 +35,20 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 默认进入商品列表，支持游客浏览 */}
+        {/* Default to product listing; supports guest browsing */}
         <Route path="/" element={<Navigate to="/home" replace />} />
 
-        {/* 公共浏览页 */}
+        {/* Public browsing pages */}
         <Route path="/home" element={<Home />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/seller/:sellerId" element={<SellerProfile />} />
 
-        {/* 公开的认证相关页面 */}
+        {/* Public auth pages */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-        {/* 需要登录 + 必须已验证邮箱 */}
+        {/* Requires login + verified email */}
         <Route
           path="/publish"
           element={
@@ -76,7 +78,7 @@ function App() {
           }
         />
 
-        {/* 需要登录 */}
+        {/* Requires login */}
         <Route
           path="/me"
           element={
@@ -151,7 +153,7 @@ function App() {
           }
         />
 
-        {/* 管理员 */}
+        {/* Admin routes */}
         <Route
           path="/admin/users"
           element={
@@ -193,7 +195,7 @@ function App() {
           }
         />
 
-        {/* 兜底 */}
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </BrowserRouter>

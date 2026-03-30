@@ -11,7 +11,7 @@ function resolveMediaUrl(url) {
   return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
 }
 
-/** 单条消息时间：HH:mm 或 昨天 HH:mm / M-D HH:mm */
+/** Format single message time: HH:mm, Yesterday HH:mm, or M-D HH:mm */
 function formatMessageTime(isoStr) {
   if (!isoStr) return "";
   const d = new Date(isoStr);
@@ -20,18 +20,16 @@ function formatMessageTime(isoStr) {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const time = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
   if (t.getTime() === today.getTime()) return time;
-  if (t.getTime() === yesterday.getTime()) return `昨天 ${time}`;
+  if (t.getTime() === yesterday.getTime()) return `Yesterday ${time}`;
   if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}-${d.getDate()} ${time}`;
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${time}`;
 }
 
-export default function Chat() {
+// ─── Reusable chat panel (accepts props instead of URL params) ───
+export function ChatPanel({ otherUserId, productId: urlProductId, onBack }) {
   const navigate = useNavigate();
-  const { otherUserId } = useParams();
-  const [searchParams] = useSearchParams();
-  const urlProductId = searchParams.get("product");
 
   const { user } = useAuth();
   const { lastMessage, sendMessage, isConnected } = useWs();
@@ -78,7 +76,7 @@ export default function Chat() {
     return () => { cancelled = true; };
   }, [resolvedProductId]);
 
-  // ── Load message history (严格按商品过滤：带 ?product= 时只拉该商品对话) ──
+  // ── Load message history (filter by product when ?product= is present) ──
   useEffect(() => {
     let cancelled = false;
     const productParam = urlProductId || productIdRef.current;
@@ -99,13 +97,11 @@ export default function Chat() {
               read: !!m.read,
             }))
             .reverse();
-          // 进入对话即视为已读：对方发来的消息在本地显示为已读（后端会在 markConversationRead 里标记）
           setMessages(
             list.map((msg) =>
               msg.from === otherUserId ? { ...msg, read: true } : msg
             )
           );
-          // 仅在没有通过 URL 指定商品时，才从首条消息推断商品（避免覆盖成别的商品）
           if (!urlProductId && !productIdRef.current) {
             const withProduct = data.find((m) => m.product_id);
             if (withProduct) setResolvedProductId(withProduct.product_id);
@@ -137,7 +133,7 @@ export default function Chat() {
     return () => { cancelled = true; };
   }, [otherUserId]);
 
-  // ── 进入对话时标记消息已读，并同步把指向该聊天的通知标为已读（通知铃铛与 Messages 同步） ──
+  // ── Mark messages as read on entering conversation; sync notification badge ──
   useEffect(() => {
     const productParam = urlProductId || resolvedProductId;
     markConversationRead(otherUserId, productParam);
@@ -160,7 +156,7 @@ export default function Chat() {
     })();
   }, [otherUserId, urlProductId, resolvedProductId, markConversationRead]);
 
-  // ── 收到对方「已读」回执：把我发出去的消息都标为已读（统一转字符串再比较） ──
+  // ── Received read receipt from partner: mark all my sent messages as read ──
   useEffect(() => {
     if (!lastMessage || lastMessage.type !== "messages_read") return;
     const r = lastMessage;
@@ -172,7 +168,7 @@ export default function Chat() {
     );
   }, [lastMessage, otherUserId, myId]);
 
-  // ── 在对话页时定期发送已读回执，保证对方能收到「已读」状态（两人都在线时生效） ──
+  // ── Periodically send read receipts while in conversation ──
   useEffect(() => {
     const productParam = urlProductId || resolvedProductId;
     const t = setInterval(() => {
@@ -181,7 +177,7 @@ export default function Chat() {
     return () => clearInterval(t);
   }, [otherUserId, urlProductId, resolvedProductId, markConversationRead]);
 
-  // ── 轮询已读状态：不依赖 WebSocket，在对话页时定期拉取接口并同步「我发的」消息的 read（解决双方都在对话里仍显示未读） ──
+  // ── Poll read status: periodically fetch API to sync read state of my messages ──
   useEffect(() => {
     const productParam = urlProductId || resolvedProductId;
     const url = `${API_BASE}/messages?other_user_id=${otherUserId}&limit=100${productParam ? `&product_id=${productParam}` : ""}`;
@@ -264,120 +260,167 @@ export default function Chat() {
   }, [input, otherUserId, sendMessage, myId]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 to-indigo-50">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/80 px-4 py-3 backdrop-blur">
-        <div className="mx-auto max-w-2xl">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/conversations")}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
-            >
-              &larr; Back
-            </button>
-            <h2 className="flex-1 truncate text-center text-base font-semibold text-gray-800">
-              {otherName}
-            </h2>
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${isConnected ? "bg-green-400" : "bg-gray-300"}`}
-              title={isConnected ? "Connected" : "Disconnected"}
-            />
-          </div>
-
-          {/* ── Product context card ── */}
-          {product && (
-            <div
-              onClick={() => navigate(`/products/${product.id}`)}
-              className="mt-2 flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-2.5 transition hover:bg-gray-100"
-            >
-              {product.image && (
-                <img
-                  src={product.image}
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-lg object-cover"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-800">
-                  {product.title}
-                </p>
-                <p className="text-xs font-semibold text-indigo-600">
-                  £{product.price}
-                </p>
-              </div>
-              <span className="text-xs text-gray-400">View &rarr;</span>
-            </div>
-          )}
+    <div className="flex h-full flex-col">
+      {/* ── Chat header ── */}
+      <div className="shrink-0 border-b border-gray-100 px-5 py-3 flex items-center gap-3">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="rounded-lg px-2 py-1.5 text-sm text-gray-500 transition hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
+          >
+            ←
+          </button>
+        )}
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 text-sm font-bold text-white shrink-0">
+          {otherName?.charAt(0)?.toUpperCase() || "?"}
         </div>
-      </header>
+        <h2 className="flex-1 truncate text-[15px] font-bold text-gray-900">
+          {otherName}
+        </h2>
+        <span
+          className={`h-2 w-2 shrink-0 rounded-full ${isConnected ? "bg-green-400" : "bg-gray-300"}`}
+          title={isConnected ? "Connected" : "Disconnected"}
+        />
+      </div>
+
+      {/* ── Product snippet card ── */}
+      {product && (
+        <div className="shrink-0 mx-4 mt-3 mb-1 flex items-center gap-3 rounded-lg bg-gray-50 p-3">
+          {product.image && (
+            <img
+              src={product.image}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-md object-cover"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-gray-900">
+              {product.title}
+            </p>
+            <p className="text-sm font-bold text-red-500 mt-0.5">
+              £{product.price}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(`/products/${product.id}`)}
+            className="shrink-0 rounded-full bg-yellow-400 px-4 py-1.5 text-sm font-medium text-black transition hover:bg-yellow-500 border-0 cursor-pointer"
+          >
+            View
+          </button>
+        </div>
+      )}
 
       {/* ── Messages ── */}
-      <main className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-2xl space-y-3">
-          {loading && (
-            <p className="py-12 text-center text-sm text-gray-400">
-              Loading messages...
-            </p>
-          )}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50/40">
+        {loading && (
+          <p className="py-16 text-center text-sm text-gray-400">
+            Loading messages...
+          </p>
+        )}
 
-          {!loading && messages.length === 0 && (
-            <p className="py-12 text-center text-sm text-gray-400">
-              No messages yet. Say hello!
-            </p>
-          )}
+        {!loading && messages.length === 0 && (
+          <div className="py-16 flex flex-col items-center justify-center">
+            <svg
+              width="48" height="48" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1" strokeLinecap="round"
+              strokeLinejoin="round" className="text-gray-300 mb-3"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p className="text-sm text-gray-400">No messages yet. Say hello!</p>
+          </div>
+        )}
 
+        <div className="space-y-4">
           {messages.map((m) => {
             const isMine = m.from === myId;
             return (
               <div
                 key={m.id}
-                className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
+                className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : ""}`}
               >
-                <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
-                    isMine
-                      ? "rounded-br-md bg-indigo-600 text-white"
-                      : "rounded-bl-md bg-white text-gray-800"
-                  }`}
-                >
-                  {m.text}
-                </div>
-                <div className={`mt-0.5 flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
-                  <span className="text-[11px] text-gray-400">
-                    {formatMessageTime(m.time)}
-                  </span>
-                  {isMine && (
-                    <span className={`text-[11px] ${m.read ? "text-gray-400" : "text-amber-500"}`}>
-                      {m.read ? "已读" : "未读"}
+                {/* Partner avatar (only for their messages) */}
+                {!isMine && (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 text-xs font-bold text-white">
+                    {otherName?.charAt(0)?.toUpperCase() || "?"}
+                  </div>
+                )}
+
+                <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} max-w-[70%]`}>
+                  <div
+                    className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      isMine
+                        ? "rounded-tr-sm bg-yellow-400 text-black"
+                        : "rounded-tl-sm bg-white text-gray-900 shadow-sm"
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                  <div className={`mt-1 flex items-center gap-1.5 px-1 ${isMine ? "flex-row-reverse" : ""}`}>
+                    <span className="text-[11px] text-gray-400">
+                      {formatMessageTime(m.time)}
                     </span>
-                  )}
+                    {isMine && (
+                      <span className={`text-[11px] ${m.read ? "text-gray-400" : "text-amber-500"}`}>
+                        {m.read ? "Read" : "Unread"}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
           <div ref={bottomRef} />
         </div>
-      </main>
+      </div>
 
-      {/* ── Input ── */}
-      <footer className="sticky bottom-0 border-t border-gray-200 bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-2xl gap-3">
+      {/* ── Input area ── */}
+      <div className="shrink-0 border-t border-gray-100 px-4 pt-2 pb-3">
+        {/* Toolbar placeholder */}
+        <div className="flex items-center gap-3 px-1 pb-2 text-gray-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-gray-600 transition-colors">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-gray-600 transition-colors">
+            <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+          </svg>
+        </div>
+
+        <div className="flex items-end gap-3">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type a message..."
-            className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="flex-1 bg-transparent text-sm outline-none border-0 py-1.5 text-gray-900 placeholder:text-gray-400"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-40"
+            className="shrink-0 rounded-full bg-yellow-400 px-6 py-2 text-sm font-medium text-black transition hover:bg-yellow-500 disabled:opacity-40 border-0 cursor-pointer"
           >
             Send
           </button>
         </div>
-      </footer>
+      </div>
+    </div>
+  );
+}
+
+// ─── Standalone route wrapper (keeps /chat/:otherUserId working) ───
+export default function Chat() {
+  const navigate = useNavigate();
+  const { otherUserId } = useParams();
+  const [searchParams] = useSearchParams();
+  const urlProductId = searchParams.get("product");
+
+  return (
+    <div className="h-screen bg-gray-50">
+      <ChatPanel
+        otherUserId={otherUserId}
+        productId={urlProductId}
+        onBack={() => navigate("/conversations")}
+      />
     </div>
   );
 }

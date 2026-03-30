@@ -1,8 +1,13 @@
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { API_BASE, authFetch } from "../api";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { API_BASE, authFetch, logout } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { useUnread } from "../context/UnreadContext";
+import NotificationBell from "../components/NotificationBell";
 import { redirectToLogin } from "../utils/authRedirect";
+import campusTradeLogo from "../assets/uol-secondhand-logo.png";
+import "./Home.css";
+import "./ProductDetail.css";
 
 const CATEGORY_DISPLAY = {
   教材: "Textbooks",
@@ -15,7 +20,7 @@ const CATEGORY_DISPLAY = {
   其他: "Other",
 };
 
-// ✅ 统一补全媒体 URL
+// Resolve relative media URLs to absolute
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
   if (url.startsWith("http") || url.startsWith("data:")) return url;
@@ -26,7 +31,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,6 +47,16 @@ export default function ProductDetail() {
   const [shareMsg, setShareMsg] = useState("");
   const [gallery, setGallery] = useState([]);
   const [activeImage, setActiveImage] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  const { unreadCount } = useUnread();
+  const [headerSearch, setHeaderSearch] = useState("");
+  const [meMenuOpen, setMeMenuOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const meMenuRef = useRef(null);
+  const adminMenuRef = useRef(null);
 
   const fallbackImg =
     "https://dummyimage.com/600x400/cccccc/000000&text=CampusTrade";
@@ -65,13 +80,13 @@ export default function ProductDetail() {
 
         const data = await res.json();
 
-        // ✅ C1：详情页优先加载大图 image_url（或 imageUrl）
+        // Prefer full-size image_url (or imageUrl) for detail page
         const fullRaw =
           data.image_url ||
           data.imageUrl ||
           (data.images?.length ? data.images[0] : "");
 
-        // ✅ 如果没有大图，就退回缩略图 thumb_url（或 images）
+        // Fallback to thumbnail if no full-size image available
         const thumbRaw =
           data.thumb_url ||
           data.thumbnail_url ||
@@ -143,6 +158,47 @@ export default function ProductDetail() {
       cancelled = true;
     };
   }, [product?.seller_id]);
+
+  useEffect(() => {
+    if (!product?.seller_id) return;
+    let cancelled = false;
+    async function fetchReviews() {
+      setReviewsLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/reviews/user/${product.seller_id}?limit=20`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setReviews(Array.isArray(data.items) ? data.items : []);
+          setReviewSummary(data.summary || null);
+        }
+      } catch (_) {}
+      finally {
+        if (!cancelled) setReviewsLoading(false);
+      }
+    }
+    fetchReviews();
+    return () => { cancelled = true; };
+  }, [product?.seller_id]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (meMenuRef.current && !meMenuRef.current.contains(e.target)) setMeMenuOpen(false);
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target)) setAdminMenuOpen(false);
+    }
+    if (meMenuOpen || adminMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [meMenuOpen, adminMenuOpen]);
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
+
+  const userAvatarUrl = user?.avatar_url ? resolveMediaUrl(user.avatar_url) : "";
+  const userLabel = user?.username || "Me";
 
   async function toggleFavorite() {
     if (!isAuthenticated) {
@@ -270,260 +326,409 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        <p>Loading...</p>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-500 text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        <h2>{error || "Product not found"}</h2>
-        <button onClick={() => navigate("/")}>Back to Home</button>
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-4">
+        <h2 className="text-xl font-semibold text-gray-700">{error || "Product not found"}</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="px-5 py-2 bg-yellow-400 text-gray-900 rounded-full font-bold hover:bg-yellow-500 transition"
+        >
+          Back to Home
+        </button>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 1000,
-        margin: "40px auto",
-        padding: 24,
-        display: "flex",
-        gap: 40,
-        flexWrap: "wrap",
-      }}
-    >
-      {/* 图片区域 */}
-      <div style={{ flex: 1, minWidth: 300 }}>
-        <img
-          src={gallery[activeImage] || product.image}
-          alt={product.name}
-          loading="eager" // 详情页：用户就是来看商品图的
-          onError={(e) => {
-            // 避免死循环
-            if (e.currentTarget.src !== fallbackImg) {
-              e.currentTarget.src = fallbackImg;
-            }
-          }}
-          style={{
-            width: "100%",
-            borderRadius: 12,
-            objectFit: "cover",
-          }}
-        />
-        {gallery.length > 1 && (
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            {gallery.map((u, idx) => (
-              <img
-                key={`${u}-${idx}`}
-                src={u}
-                alt={`thumb-${idx + 1}`}
-                onClick={() => setActiveImage(idx)}
-                style={{
-                  width: 72,
-                  height: 72,
-                  objectFit: "cover",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  border: idx === activeImage ? "2px solid #4f46e5" : "1px solid #e2e8f0",
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="pd-page">
+      {/* ====== Platform-wide Yellow Navigation Bar ====== */}
+      <header className="ct-header">
+        <div className="ct-header-inner">
+          <Link to="/home" className="ct-brand" style={{ textDecoration: "none" }}>
+            <img src={campusTradeLogo} alt="CampusTrade" className="ct-brand-logo" />
+            <span className="ct-brand-name">CampusTrade</span>
+          </Link>
 
-      {/* 信息区域 */}
-      <div style={{ flex: 1, minWidth: 280 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => navigate(-1)}>← Back</button>
-          <button
-            onClick={handleShare}
-            style={{
-              border: "1px solid #cbd5e1",
-              background: "#fff",
-              color: "#0f172a",
-              borderRadius: 8,
-              padding: "6px 12px",
-              cursor: "pointer",
-              fontWeight: 600,
+          <form
+            className="ct-search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate(`/home${headerSearch.trim() ? `?search=${encodeURIComponent(headerSearch.trim())}` : ""}`);
             }}
-            title="Share this product"
           >
-            Share
-          </button>
-          <button
-            onClick={copyShareLink}
-            style={{
-              border: "1px solid #cbd5e1",
-              background: "#fff",
-              color: "#0f172a",
-              borderRadius: 8,
-              padding: "6px 12px",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-            title="Copy product link"
-          >
-            Copy Link
-          </button>
-          <button
-            onClick={toggleFavorite}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: 26,
-              cursor: "pointer",
-              color: favorited ? "#ef4444" : "#cbd5e1",
-              transition: "color 0.15s, transform 0.15s",
-              transform: favorited ? "scale(1.15)" : "scale(1)",
-            }}
-            title={
-              isAuthenticated
-                ? (favorited ? "Remove from favorites" : "Add to favorites")
-                : "Please log in first to manage favorites"
-            }
-          >
-            {favorited ? "♥" : "♡"}
-          </button>
-        </div>
-
-        <h1 style={{ marginBottom: 10 }}>{product.name}</h1>
-
-        {product.status === "sold" && (
-          <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 999, background: "#fee2e2", color: "#991b1b", fontWeight: 600, fontSize: 13, marginBottom: 12 }}>
-            SOLD
-          </span>
-        )}
-
-        <p style={{ fontSize: 22, fontWeight: "bold", marginBottom: 12 }}>
-          £{product.price}
-        </p>
-
-        {product.seller_id && (
-          <button
-            onClick={() => navigate(`/seller/${product.seller_id}`)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 14,
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-            }}
-            title="Go to seller profile"
-          >
-            <img
-              src={seller?.avatar_url ? resolveMediaUrl(seller.avatar_url) : "https://placehold.co/40x40"}
-              alt={seller?.username || "seller"}
-              style={{ width: 40, height: 40, borderRadius: "9999px", objectFit: "cover" }}
-              onError={(e) => {
-                e.currentTarget.src = "https://placehold.co/40x40";
-              }}
+            <svg className="ct-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="ct-search-input"
+              placeholder="Search products..."
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
             />
-            <span style={{ fontWeight: 600, color: "#334155" }}>
-              Seller: {seller?.username || "View seller profile"}
-            </span>
-          </button>
-        )}
+            <button type="submit" className="ct-search-btn">Search</button>
+          </form>
 
-        <p style={{ marginBottom: 20 }}>
-          <strong>Condition:</strong> {product.condition}
-        </p>
+          <nav className="ct-nav">
+            {!authLoading && !isAuthenticated && (
+              <>
+                <Link to="/login" className="ct-nav-item">Login</Link>
+                <Link to="/register" className="ct-nav-item">Register</Link>
+                <button
+                  type="button"
+                  className="ct-nav-item ct-nav-highlight"
+                  onClick={() => redirectToLogin(navigate, location, "Please log in first to publish a product.")}
+                >
+                  Publish
+                </button>
+              </>
+            )}
 
-        {product.category && (
-          <p style={{ marginBottom: 20 }}>
-            <strong>Category:</strong>{" "}
-            {CATEGORY_DISPLAY[product.category] ?? product.category}
-          </p>
-        )}
+            {isAuthenticated && (
+              <>
+                <NotificationBell variant="utility" />
 
-        <p style={{ marginBottom: 12 }}>
-          <strong>Posted:</strong>{" "}
-          {product.created_at ? new Date(product.created_at).toLocaleString() : "Unknown"}
-        </p>
+                <Link to="/conversations" className="ct-nav-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>Messages</span>
+                  {unreadCount > 0 && (
+                    <span className="unread-badge">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
 
-        <p style={{ marginBottom: 20 }}>
-          <strong>Views:</strong> {product.views ?? 0}
-        </p>
+                <Link to="/publish" className="ct-nav-item ct-nav-highlight">Publish</Link>
 
-        {product.description && (
-          <p style={{ marginBottom: 20, color: "#555" }}>
-            {product.description}
-          </p>
-        )}
+                {user?.role === "admin" && (
+                  <div className="admin-dropdown" ref={adminMenuRef}>
+                    <button
+                      type="button"
+                      className="ct-nav-item"
+                      onClick={(e) => { e.stopPropagation(); setAdminMenuOpen((v) => !v); setMeMenuOpen(false); }}
+                    >
+                      <span>Admin</span>
+                      <span className={`me-arrow ${adminMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
+                    </button>
+                    {adminMenuOpen && (
+                      <ul className="me-dropdown-menu admin-dropdown-menu">
+                        <li><Link to="/admin/review" onClick={() => setAdminMenuOpen(false)}>Product review</Link></li>
+                        <li><Link to="/admin/users" onClick={() => setAdminMenuOpen(false)}>User management</Link></li>
+                      </ul>
+                    )}
+                  </div>
+                )}
 
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {product.status !== "sold" && (!user || user.id !== product.seller_id) && (
-            <button
-              onClick={handleOrder}
-              disabled={ordering}
-              style={{
-                padding: "12px 24px",
-                fontSize: 16,
-                cursor: ordering ? "not-allowed" : "pointer",
-                background: "#4f46e5",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                fontWeight: 600,
-              }}
-            >
-              {ordering ? "Placing..." : "Buy Now"}
-            </button>
-          )}
-          {product.seller_id && (!user || user.id !== product.seller_id) && (
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  redirectToLogin(navigate, location, "Please log in first to contact the seller.");
-                  return;
-                }
-                navigate(`/chat/${product.seller_id}?product=${product.id}`);
-              }}
-              style={{
-                padding: "12px 24px",
-                fontSize: 16,
-                cursor: "pointer",
-                background: "#0f172a",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                fontWeight: 600,
-              }}
-            >
-              Chat with Seller
-            </button>
-          )}
+                <div className="me-dropdown" ref={meMenuRef}>
+                  <button
+                    type="button"
+                    className="ct-nav-item ct-account-trigger"
+                    onClick={(e) => { e.stopPropagation(); setMeMenuOpen((v) => !v); setAdminMenuOpen(false); }}
+                  >
+                    {userAvatarUrl ? (
+                      <img src={userAvatarUrl} alt={userLabel} className="user-chip-avatar" />
+                    ) : (
+                      <span className="user-chip-avatar user-chip-avatar-fallback">
+                        {userLabel?.[0]?.toUpperCase() || "M"}
+                      </span>
+                    )}
+                    <span>{userLabel}</span>
+                    <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
+                  </button>
+                  {meMenuOpen && (
+                    <ul className="me-dropdown-menu">
+                      <li><Link to="/me" onClick={() => setMeMenuOpen(false)}>My profile</Link></li>
+                      <li><Link to="/my-products" onClick={() => setMeMenuOpen(false)}>Manage my products</Link></li>
+                      <li className="me-dropdown-divider" />
+                      <li><Link to="/my-orders" onClick={() => setMeMenuOpen(false)}>My orders</Link></li>
+                      <li><Link to="/my-favorites" onClick={() => setMeMenuOpen(false)}>My favorites</Link></li>
+                      <li><Link to="/my-reviews" onClick={() => setMeMenuOpen(false)}>My reviews</Link></li>
+                      <li><Link to="/recent-viewed" onClick={() => setMeMenuOpen(false)}>Recently viewed</Link></li>
+                      <li className="me-dropdown-divider" />
+                      <li>
+                        <button type="button" className="dropdown-action" onClick={() => { setMeMenuOpen(false); handleLogout(); }}>
+                          Log out
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </nav>
         </div>
-        {!isAuthenticated && (
-          <p style={{ marginTop: 12, color: "#64748b", fontSize: 14 }}>
-            You are browsing as a guest. Please log in first to favorite, buy, chat, or report this product.
-          </p>
-        )}
-        {orderMsg && (
-          <p style={{ marginTop: 12, color: orderMsg.includes("success") ? "#16a34a" : "#ef4444", fontWeight: 600 }}>
-            {orderMsg}
-          </p>
-        )}
-        {shareMsg && (
-          <p style={{ marginTop: 8, color: shareMsg.toLowerCase().includes("failed") ? "#ef4444" : "#16a34a", fontWeight: 600 }}>
-            {shareMsg}
-          </p>
-        )}
-        {user && product.seller_id && user.id === product.seller_id && (
-          <p style={{ color: "#64748b", fontSize: 14, fontStyle: "italic" }}>
-            This is your product.
-          </p>
-        )}
+      </header>
 
+      {/* ====== Main Content ====== */}
+      <div className="max-w-[1120px] mx-auto px-6 mt-5 pb-8">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {/* ====== Card Header: Back, Seller Info, Share, Copy ====== */}
+          <div className="pd-card-header">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="pd-back-btn"
+                title="Go back"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {product.seller_id && (
+                <button
+                  onClick={() => navigate(`/seller/${product.seller_id}`)}
+                  className="pd-seller-header"
+                >
+                  <img
+                    src={seller?.avatar_url ? resolveMediaUrl(seller.avatar_url) : "https://placehold.co/40x40"}
+                    alt={seller?.username || "seller"}
+                    className="w-10 h-10 rounded-full object-cover bg-gray-200 flex-shrink-0"
+                    onError={(e) => { e.currentTarget.src = "https://placehold.co/40x40"; }}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 text-sm truncate leading-tight">
+                      {seller?.username || "Seller"}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {reviewSummary && reviewSummary.total_reviews > 0 && (
+                        <span className="text-xs text-yellow-600 font-medium">
+                          ★ {reviewSummary.avg_rating}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">
+                        {product.created_at
+                          ? new Date(product.created_at).toLocaleDateString()
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button onClick={handleShare} className="pd-header-action-btn" title="Share">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
+              </button>
+              <button onClick={copyShareLink} className="pd-header-action-btn" title="Copy link">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Copy
+              </button>
+              {shareMsg && (
+                <span className={`text-xs font-semibold ml-1 ${shareMsg.toLowerCase().includes("failed") ? "text-red-500" : "text-green-600"}`}>
+                  {shareMsg}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col lg:flex-row">
+
+            {/* ====== Left Column: Image Gallery ====== */}
+            <div className="lg:w-[55%] p-5">
+              <div className="flex gap-3">
+                {gallery.length > 1 && (
+                  <div className="pd-thumb-col">
+                    {gallery.map((u, idx) => (
+                      <img
+                        key={`${u}-${idx}`}
+                        src={u}
+                        alt={`thumb-${idx + 1}`}
+                        onClick={() => setActiveImage(idx)}
+                        className={`pd-thumb-item ${
+                          idx === activeImage ? "pd-thumb-active" : "pd-thumb-inactive"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="pd-main-image-wrap">
+                  <img
+                    src={gallery[activeImage] || product.image}
+                    alt={product.name}
+                    loading="eager"
+                    onError={(e) => {
+                      if (e.currentTarget.src !== fallbackImg) {
+                        e.currentTarget.src = fallbackImg;
+                      }
+                    }}
+                    className="pd-main-image"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ====== Right Column: Product Details (scrollable content + pinned action bar) ====== */}
+            <div className="pd-right-col">
+
+              {/* Scrollable content area */}
+              <div className="pd-right-scroll">
+                {/* Price */}
+                <div className="flex items-baseline gap-3">
+                  <span className="pd-price">£{product.price}</span>
+                  {product.status === "sold" && (
+                    <span className="px-2.5 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold tracking-wide">
+                      SOLD
+                    </span>
+                  )}
+                </div>
+
+                {/* Tags + Views */}
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="pd-tag pd-tag-green">{product.condition}</span>
+                  {product.category && (
+                    <span className="pd-tag pd-tag-blue">
+                      {CATEGORY_DISPLAY[product.category] ?? product.category}
+                    </span>
+                  )}
+                  <span className="pd-views-badge">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    {product.views ?? 0}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-xl font-bold text-gray-900 mt-4 leading-snug line-clamp-2">
+                  {product.name}
+                </h1>
+
+                {/* Description */}
+                {product.description && (
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap mt-3">
+                    {product.description}
+                  </p>
+                )}
+
+                {/* Meta info grid */}
+                <div className="pd-meta-grid">
+                  <div className="pd-meta-item">
+                    <span className="pd-meta-label">Condition</span>
+                    <span className="pd-meta-value">{product.condition}</span>
+                  </div>
+                  {product.category && (
+                    <div className="pd-meta-item">
+                      <span className="pd-meta-label">Category</span>
+                      <span className="pd-meta-value">
+                        {CATEGORY_DISPLAY[product.category] ?? product.category}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pd-meta-item">
+                    <span className="pd-meta-label">Listed</span>
+                    <span className="pd-meta-value">
+                      {product.created_at
+                        ? new Date(product.created_at).toLocaleDateString()
+                        : "Unknown"}
+                    </span>
+                  </div>
+                  <div className="pd-meta-item">
+                    <span className="pd-meta-label">Status</span>
+                    <span className="pd-meta-value capitalize">{product.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ====== Pinned bottom action bar — always visible ====== */}
+              <div className="pd-action-bar-pinned">
+                {/* Favorite */}
+                {(!user || user.id !== product.seller_id) && (
+                  <button
+                    onClick={toggleFavorite}
+                    className={`pd-action-fav ${favorited ? "pd-action-fav-active" : ""}`}
+                    title={
+                      isAuthenticated
+                        ? (favorited ? "Remove from favorites" : "Add to favorites")
+                        : "Please log in first to manage favorites"
+                    }
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span className="text-xs mt-0.5">{favorited ? "Saved" : "Save"}</span>
+                  </button>
+                )}
+
+                {/* Chat */}
+                {product.seller_id && (!user || user.id !== product.seller_id) && (
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        redirectToLogin(navigate, location, "Please log in first to contact the seller.");
+                        return;
+                      }
+                      navigate(`/chat/${product.seller_id}?product=${product.id}`);
+                    }}
+                    className="pd-action-chat"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Message
+                  </button>
+                )}
+
+                {/* Buy Now */}
+                {product.status !== "sold" && (!user || user.id !== product.seller_id) && (
+                  <button
+                    onClick={handleOrder}
+                    disabled={ordering}
+                    className={`pd-action-buy ${ordering ? "pd-action-buy-disabled" : ""}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+                    </svg>
+                    {ordering ? "Placing..." : "Buy Now"}
+                  </button>
+                )}
+
+                {/* Status message */}
+                {orderMsg && (
+                  <p className={`pd-action-msg ${orderMsg.includes("success") ? "text-green-600" : "text-red-500"}`}>
+                    {orderMsg}
+                  </p>
+                )}
+              </div>
+
+              {/* Guest / owner hint below action bar */}
+              {!isAuthenticated && (
+                <p className="text-xs text-gray-400 text-center px-4 pb-3">
+                  Browsing as guest. Log in to save, buy, message, or report.
+                </p>
+              )}
+              {user && product.seller_id && user.id === product.seller_id && (
+                <p className="text-xs text-gray-400 italic text-center px-4 pb-3">
+                  This is your product.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ====== Report Section ====== */}
         {product.seller_id && (!user || user.id !== product.seller_id) && (
-          <div style={{ marginTop: 20 }}>
+          <div className="text-center mt-5 pb-2">
             <button
               onClick={() => {
                 if (!isAuthenticated) {
@@ -532,22 +737,19 @@ export default function ProductDetail() {
                 }
                 setReportOpen(!reportOpen);
               }}
-              style={{
-                background: "none", border: "none", color: "#94a3b8",
-                cursor: "pointer", fontSize: 13, textDecoration: "underline",
-              }}
+              className="text-xs text-gray-400 underline hover:text-gray-600 transition"
             >
               Report this product
             </button>
 
             {isAuthenticated && reportOpen && (
-              <div style={{
-                marginTop: 10, padding: 16, background: "#f8fafc",
-                borderRadius: 10, border: "1px solid #e2e8f0",
-              }}>
-                <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600 }}>Reason</label>
-                <select value={reportReason} onChange={(e) => setReportReason(e.target.value)}
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #ddd", marginBottom: 10 }}>
+              <div className="mt-3 max-w-lg mx-auto p-5 bg-white rounded-2xl shadow-sm text-left">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Reason</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 mb-3 text-sm bg-gray-50 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition"
+                >
                   <option value="spam">Spam</option>
                   <option value="fraud">Fraud / Scam</option>
                   <option value="inappropriate">Inappropriate content</option>
@@ -555,21 +757,26 @@ export default function ProductDetail() {
                   <option value="wrong_category">Wrong category</option>
                   <option value="other">Other</option>
                 </select>
-                <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600 }}>Description (optional)</label>
-                <textarea value={reportDesc} onChange={(e) => setReportDesc(e.target.value)}
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description (optional)</label>
+                <textarea
+                  value={reportDesc}
+                  onChange={(e) => setReportDesc(e.target.value)}
                   placeholder="Provide more details..."
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #ddd", minHeight: 60, resize: "vertical", marginBottom: 10 }} />
-                <button onClick={handleReport} disabled={reporting}
-                  style={{
-                    padding: "8px 18px", background: "#ef4444", color: "#fff",
-                    border: "none", borderRadius: 8, cursor: reporting ? "not-allowed" : "pointer", fontWeight: 600,
-                  }}>
+                  className="w-full p-2.5 rounded-xl border border-gray-200 min-h-[70px] resize-y mb-3 text-sm bg-gray-50 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition"
+                />
+                <button
+                  onClick={handleReport}
+                  disabled={reporting}
+                  className={`px-5 py-2.5 text-sm font-semibold text-white rounded-full transition ${
+                    reporting ? "bg-red-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"
+                  }`}
+                >
                   {reporting ? "Submitting..." : "Submit Report"}
                 </button>
               </div>
             )}
             {reportMsg && (
-              <p style={{ marginTop: 8, fontSize: 13, color: reportMsg.includes("success") ? "#16a34a" : "#ef4444" }}>
+              <p className={`mt-2 text-xs ${reportMsg.includes("success") ? "text-green-600" : "text-red-500"}`}>
                 {reportMsg}
               </p>
             )}

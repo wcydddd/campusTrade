@@ -1,10 +1,10 @@
-// 开发环境走 Vite 代理 /api -> 后端 8000，避免跨域；生产环境用环境变量或同 host:8000
+// Dev: Vite proxy /api -> backend 8000 (avoids CORS); prod: env var or same host:8000
 const _backendOrigin =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? "" : `http://${window.location.hostname}:8000`);
 export const API_BASE =
   _backendOrigin || (typeof window !== "undefined" ? "/api" : "http://127.0.0.1:8000");
-// WebSocket：开发时用当前 host + /api，由 Vite 代理到后端
+// WebSocket: dev uses current host + /api via Vite proxy
 export const WS_BASE =
   import.meta.env.VITE_WS_URL ||
   (import.meta.env.DEV && typeof window !== "undefined"
@@ -95,7 +95,7 @@ export async function apiFetch(path, options = {}) {
   return data;
 }
 
-/** 清除本地登录态并派发 auth:logout（401 时自动调用，或用户点击登出时调用） */
+/** Clear local auth state and dispatch auth:logout (called on 401 or manual logout) */
 export function logout() {
   getStorageCandidates().forEach((storage) => {
     storage.removeItem(TOKEN_KEY);
@@ -105,11 +105,9 @@ export function logout() {
 }
 
 /**
- * 带认证头的 fetch，传入完整 URL，返回 Response。
- * 若响应为 401，会清除 token/user 并派发 auth:logout，调用方仍会收到 401 的 res。
- *
- * ✅ Enhancement (B):
- * - 若响应为 429，会尝试解析 JSON 并挂到 res._data，方便调用方拿到更友好的提示信息
+ * Authenticated fetch wrapper. Accepts full URL, returns Response.
+ * On 401: clears token/user and dispatches auth:logout; caller still receives 401 res.
+ * On 429: attempts to parse JSON and attach to res._data for caller convenience.
  */
 export async function authFetch(url, options = {}) {
   const token = getStoredToken();
@@ -121,13 +119,13 @@ export async function authFetch(url, options = {}) {
 
   const res = await fetch(url, { ...options, headers });
 
-  // 401: 清理登录态
+  // 401: clear auth state
   if (res.status === 401) {
     logout();
     return res;
   }
 
-  // ✅ 429: 解析返回体（不改变返回类型；只是附加字段，页面可选用）
+  // 429: parse body and attach to res._data (optional convenience for callers)
   if (res.status === 429) {
     try {
       const cloned = res.clone();
@@ -141,7 +139,7 @@ export async function authFetch(url, options = {}) {
   return res;
 }
 
-/** 获取当前用户信息 */
+/** Fetch current user info */
 export async function getMe() {
   const res = await authFetch(`${API_BASE}/auth/me`);
   const data = await parseJsonSafe(res);

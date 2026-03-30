@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import ProductCard from "../components/ProductCard";
+import UserCenterSidebar from "../components/UserCenterSidebar";
 
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -60,23 +61,65 @@ export default function RecentViewed() {
   }, [items]);
 
   return (
-    <div style={{ maxWidth: 1080, margin: "24px auto", padding: "0 16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h1 style={{ margin: 0 }}>Recently Viewed</h1>
-        <Link to="/home">Back to Home</Link>
+    <div className="min-h-screen bg-[#f4f4f4]">
+      <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4 pb-10">
+        <UserCenterSidebar />
+
+        <section className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-6">
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight m-0">Recently Viewed</h1>
+            <Link
+              to="/home"
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors no-underline"
+            >
+              &larr; Back to Home
+            </Link>
+          </div>
+
+          {/* Tabs */}
+          <div className="px-6 mt-4 flex items-end gap-6 border-b border-gray-100">
+            <button
+              type="button"
+              className="relative pb-3 text-sm font-bold text-gray-900 bg-transparent border-none cursor-pointer px-0 after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:w-8 after:h-[3px] after:rounded-full after:bg-amber-400"
+            >
+              All
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 pb-6">
+            {loading && <p className="text-gray-400 mt-5">Loading...</p>}
+            {error && <p className="text-red-700 mt-5">{error}</p>}
+
+            {!loading && !error && products.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-24">
+                <svg
+                  className="w-16 h-16 text-gray-200 mb-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <p className="text-sm text-gray-400 m-0">No browsing history yet.</p>
+              </div>
+            )}
+
+            {!loading && !error && products.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-      {!loading && !error && products.length === 0 && (
-        <p style={{ color: "#64748b" }}>No browsing history yet.</p>
-      )}
-      {!loading && !error && products.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

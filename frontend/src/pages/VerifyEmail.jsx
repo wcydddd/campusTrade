@@ -14,7 +14,7 @@ export default function VerifyEmail() {
   const [countdown, setCountdown] = useState(0);
   const [verified, setVerified] = useState(false);
 
-  // 发送验证码倒计时
+  // Verification code cooldown timer
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setInterval(() => setCountdown((c) => c - 1), 1000);

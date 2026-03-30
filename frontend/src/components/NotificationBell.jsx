@@ -58,7 +58,7 @@ export default function NotificationBell({ variant = "default" }) {
     return () => { c = true; };
   }, [isAuthenticated]);
 
-  // ── 同步：在 Messages 里查看某对话后，通知角标随之更新（来自 Chat 页的 notifications:unread_update） ──
+  // ── Sync: update badge when a conversation is viewed in Messages (via Chat page event) ──
   useEffect(() => {
     const handler = (e) => {
       if (typeof e.detail?.total_unread === "number") setUnread(e.detail.total_unread);
@@ -145,6 +145,16 @@ export default function NotificationBell({ variant = "default" }) {
     } catch { /* ignore */ }
   };
 
+  // ── Clear all notifications ──
+  const handleClearAll = async (e) => {
+    e.stopPropagation();
+    try {
+      await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+    } catch { /* ignore */ }
+    setItems([]);
+    setUnread(0);
+  };
+
   if (!isAuthenticated) return null;
 
   const isNav = variant === "nav";
@@ -154,20 +164,17 @@ export default function NotificationBell({ variant = "default" }) {
         position: "relative",
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "flex-start",
-        gap: 10,
-        width: "100%",
-        minHeight: 52,
-        padding: "14px 16px",
-        borderRadius: 16,
-        border: "1px solid rgba(148, 163, 184, 0.16)",
-        background: "rgba(255, 255, 255, 0.92)",
-        color: "#0f172a",
-        fontSize: 14,
+        justifyContent: "center",
+        gap: 6,
+        padding: "8px 12px",
+        borderRadius: 8,
+        border: "none",
+        background: "transparent",
+        color: "#1a1a1a",
+        fontSize: 13,
         fontWeight: 600,
         cursor: "pointer",
-        transition: "background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s",
-        boxShadow: "0 10px 22px rgba(15, 23, 42, 0.05)",
+        transition: "background 0.15s",
       }
     : isNav
     ? {
@@ -206,7 +213,7 @@ export default function NotificationBell({ variant = "default" }) {
       };
 
   return (
-    <div ref={panelRef} style={{ position: "relative", width: isUtility ? "100%" : "auto" }}>
+    <div ref={panelRef} style={{ position: "relative" }}>
       {/* ── Bell button ── */}
       <button
         type="button"
@@ -215,7 +222,9 @@ export default function NotificationBell({ variant = "default" }) {
         title={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
         style={buttonStyle}
         onMouseEnter={(e) => {
-          if (isNav || isUtility) {
+          if (isUtility) {
+            e.currentTarget.style.background = "rgba(0, 0, 0, 0.08)";
+          } else if (isNav) {
             e.currentTarget.style.background = "#f8fafc";
             e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.22)";
             e.currentTarget.style.boxShadow = "0 14px 28px rgba(15, 23, 42, 0.08)";
@@ -225,14 +234,12 @@ export default function NotificationBell({ variant = "default" }) {
           }
         }}
         onMouseLeave={(e) => {
-          if (isNav || isUtility) {
-            e.currentTarget.style.background = isUtility ? "rgba(255, 255, 255, 0.92)" : "#fff";
-            e.currentTarget.style.borderColor = isUtility
-              ? "rgba(148, 163, 184, 0.16)"
-              : "rgba(148, 163, 184, 0.18)";
-            e.currentTarget.style.boxShadow = isUtility
-              ? "0 10px 22px rgba(15, 23, 42, 0.05)"
-              : "0 8px 18px rgba(15, 23, 42, 0.05)";
+          if (isUtility) {
+            e.currentTarget.style.background = "transparent";
+          } else if (isNav) {
+            e.currentTarget.style.background = "#fff";
+            e.currentTarget.style.borderColor = "rgba(148, 163, 184, 0.18)";
+            e.currentTarget.style.boxShadow = "0 8px 18px rgba(15, 23, 42, 0.05)";
             e.currentTarget.style.transform = "translateY(0)";
           } else {
             e.currentTarget.style.background = "#0f172a";
@@ -308,21 +315,50 @@ export default function NotificationBell({ variant = "default" }) {
             <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>
               Notifications
             </span>
-            {unread > 0 && (
-              <button
-                onClick={handleReadAll}
-                style={{
-                  border: "none",
-                  background: "none",
-                  color: "#6366f1",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Mark all read
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {unread > 0 && (
+                <button
+                  onClick={handleReadAll}
+                  style={{
+                    border: "none",
+                    background: "none",
+                    color: "#6366f1",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
+              {items.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    border: "none",
+                    background: "none",
+                    color: "#9ca3af",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "color 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "#ca8a04"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Items */}

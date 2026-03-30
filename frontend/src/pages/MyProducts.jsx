@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
+import UserCenterSidebar from "../components/UserCenterSidebar";
 import "./MyProducts.css";
 
 // Backend returns category in Chinese; show English to user
@@ -15,7 +16,7 @@ const CATEGORY_DISPLAY = {
   Stationery: "Other",
 };
 
-// ✅ 统一补全媒体 URL
+// Resolve relative media URLs to absolute
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
   if (url.startsWith("http") || url.startsWith("data:")) return url;
@@ -106,7 +107,7 @@ function MyProducts() {
   const soldProducts = products.filter((p) => p.status === "sold");
 
   function renderProductCard(p) {
-    // ✅ C1：列表优先 thumb_url
+    // C1: prefer thumb_url for list view
     const thumbRaw =
       p.thumb_url ||
       p.thumbnail_url ||
@@ -125,15 +126,16 @@ function MyProducts() {
       placeholder;
 
     return (
-      <div key={p.id} className="my-products-card">
-        <Link
-          to={`/products/${p.id}`}
-          className="my-products-card-image-wrap"
-        >
+      <div
+        key={p.id}
+        className="bg-white border border-gray-100 rounded-xl overflow-hidden flex flex-col"
+      >
+        <Link to={`/products/${p.id}`} className="block aspect-square overflow-hidden">
           <img
             src={imgSrc}
             alt={p.title}
             loading="lazy"
+            className="w-full h-full object-cover"
             onError={(e) => {
               if (e.currentTarget.src !== placeholder) {
                 e.currentTarget.src = placeholder;
@@ -142,48 +144,41 @@ function MyProducts() {
           />
         </Link>
 
-        <div className="my-products-card-body">
-          <h3>{p.title}</h3>
+        <div className="p-3 flex-1 flex flex-col">
+          <h3 className="text-sm font-bold text-gray-900 truncate mb-1">{p.title}</h3>
+
           {p.status === "pending" && (
-            <span style={{
-              display: "inline-block", padding: "2px 10px", borderRadius: 999,
-              background: "#fffbeb", color: "#b45309", fontSize: 12, fontWeight: 600, marginBottom: 4,
-            }}>
+            <span className="inline-block w-fit bg-amber-50 text-amber-600 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-1">
               Pending review
             </span>
           )}
           {p.status === "rejected" && (
-            <span style={{
-              display: "inline-block", padding: "2px 10px", borderRadius: 999,
-              background: "#fef2f2", color: "#b91c1c", fontSize: 12, fontWeight: 600, marginBottom: 4,
-            }}>
+            <span className="inline-block w-fit bg-red-50 text-red-700 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-1">
               Rejected
             </span>
           )}
           {p.status === "sold" && (
-            <span style={{
-              display: "inline-block", padding: "2px 10px", borderRadius: 999,
-              background: "#ecfdf5", color: "#047857", fontSize: 12, fontWeight: 600, marginBottom: 4,
-            }}>
+            <span className="inline-block w-fit bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-1">
               Sold
             </span>
           )}
-          <p className="my-products-card-price">£{p.price}</p>
-          <p className="my-products-card-meta">
-            {CATEGORY_DISPLAY[p.category] ?? p.category} · {p.condition}
-          </p>
 
-          <div className="my-products-card-actions">
+          <p className="text-xl font-bold text-orange-500 mt-1 mb-0.5">£{p.price}</p>
+          <span className="inline-block w-fit bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full text-xs mb-2">
+            {CATEGORY_DISPLAY[p.category] ?? p.category} · {p.condition}
+          </span>
+
+          <div className="mt-auto pt-3 border-t border-gray-50 flex items-center gap-2">
             <Link
               to={`/my-products/${p.id}/edit`}
-              className="my-products-btn my-products-btn-edit"
+              className="rounded-full px-3 py-1.5 text-sm font-medium border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 no-underline transition-colors"
             >
               Edit
             </Link>
 
             <button
               type="button"
-              className="my-products-btn my-products-btn-boost"
+              className="rounded-full px-3 py-1.5 text-sm font-medium bg-yellow-400 text-black hover:bg-yellow-500 border-0 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => handleBoost(p.id)}
               disabled={
                 boostingId === p.id ||
@@ -201,7 +196,7 @@ function MyProducts() {
 
             <button
               type="button"
-              className="my-products-btn my-products-btn-delete"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 border-0 cursor-pointer transition-colors ml-auto"
               onClick={() => handleDelete(p.id, p.title)}
             >
               Delete
@@ -213,49 +208,82 @@ function MyProducts() {
   }
 
   return (
-    <div className="my-products">
-      <div className="my-products-header">
-        <h1>My Products</h1>
-        <Link to="/home" className="my-products-back">
-          Back to Home
-        </Link>
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4">
+        <UserCenterSidebar />
+
+        <div className="flex-1 bg-white rounded-2xl p-6 shadow-sm">
+          <div className="my-products-header">
+            <h1>My Products</h1>
+            <Link
+              to="/home"
+              className="text-gray-400 hover:text-gray-600 text-sm no-underline"
+            >
+              Back to Home
+            </Link>
+          </div>
+
+          {loading && <p className="my-products-msg">Loading...</p>}
+          {error && <p className="my-products-error">{error}</p>}
+          {!error && actionMsg && <p className="my-products-msg">{actionMsg}</p>}
+
+          {!loading && !error && products.length === 0 && (
+            <p className="my-products-msg">
+              You have not published any products yet.
+            </p>
+          )}
+
+          {!loading && !error && products.length > 0 && (
+            <>
+              <section className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 border-l-4 border-yellow-400 pl-2">
+                  My listings
+                </h2>
+                {onSaleProducts.length === 0 ? (
+                  <div className="py-16 flex flex-col items-center justify-center">
+                    <svg
+                      width="48" height="48" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"
+                      strokeLinejoin="round" className="text-gray-300 mb-3"
+                    >
+                      <path d="M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 0L4 7m8 4v10m0-10L4 7v10l8 4" />
+                    </svg>
+                    <p className="text-gray-400 text-sm">No active listings.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-4">
+                    {onSaleProducts.map((p) => renderProductCard(p))}
+                  </div>
+                )}
+              </section>
+
+              <section className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 border-l-4 border-yellow-400 pl-2">
+                  Sold items
+                </h2>
+                {soldProducts.length === 0 ? (
+                  <div className="py-16 flex flex-col items-center justify-center">
+                    <svg
+                      width="48" height="48" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"
+                      strokeLinejoin="round" className="text-gray-300 mb-3"
+                    >
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                      <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
+                    <p className="text-gray-400 text-sm">No sold items yet.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-4">
+                    {soldProducts.map((p) => renderProductCard(p))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
       </div>
-
-      {loading && <p className="my-products-msg">Loading...</p>}
-      {error && <p className="my-products-error">{error}</p>}
-      {!error && actionMsg && <p className="my-products-msg">{actionMsg}</p>}
-
-      {!loading && !error && products.length === 0 && (
-        <p className="my-products-msg">
-          You have not published any products yet.
-        </p>
-      )}
-
-      {!loading && !error && products.length > 0 && (
-        <>
-          <section className="my-products-section">
-            <h2 className="my-products-section-title">My listings</h2>
-            {onSaleProducts.length === 0 ? (
-              <p className="my-products-msg">No active listings.</p>
-            ) : (
-              <div className="my-products-list">
-                {onSaleProducts.map((p) => renderProductCard(p))}
-              </div>
-            )}
-          </section>
-
-          <section className="my-products-section">
-            <h2 className="my-products-section-title">Sold items</h2>
-            {soldProducts.length === 0 ? (
-              <p className="my-products-msg">No sold items yet.</p>
-            ) : (
-              <div className="my-products-list">
-                {soldProducts.map((p) => renderProductCard(p))}
-              </div>
-            )}
-          </section>
-        </>
-      )}
     </div>
   );
 }

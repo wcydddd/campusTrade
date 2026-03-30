@@ -1,0 +1,402 @@
+/* ====== ProductDetail — Xianyu-inspired Layout ====== */
+
+/* Page wrapper */
+.pd-page {
+  min-height: 100vh;
+  background: #f4f4f4;
+}
+
+/* Card header (inside product card — Back, Seller, Share, Copy) */
+.pd-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+/* Back button */
+.pd-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #555;
+  border: none;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.pd-back-btn:hover {
+  background: #eee;
+  color: #222;
+  border-color: transparent;
+}
+
+/* Seller header row */
+.pd-seller-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: inherit;
+  transition: background 0.2s;
+}
+.pd-seller-header:hover {
+  background: #f7f7f7;
+  border-color: transparent;
+}
+
+/* Header action buttons (Share / Copy) */
+.pd-header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pd-header-action-btn:hover {
+  background: #eaeaea;
+  color: #333;
+  border-color: transparent;
+}
+
+/* ====== Thumbnail column (vertical strip) ====== */
+.pd-thumb-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 72px;
+  flex-shrink: 0;
+  max-height: 460px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+.pd-thumb-col::-webkit-scrollbar {
+  width: 3px;
+}
+.pd-thumb-col::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+
+.pd-thumb-item {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  transition: all 0.2s;
+}
+.pd-thumb-active {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.35);
+}
+.pd-thumb-inactive:hover {
+  border-color: #d1d5db;
+}
+
+/* ====== Main Image ====== */
+.pd-main-image-wrap {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  max-height: 460px;
+  background: #f8f8f8;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pd-main-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+.pd-main-image-wrap:hover .pd-main-image {
+  transform: scale(1.03);
+}
+
+/* ====== Price ====== */
+.pd-price {
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: #e53e3e;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+/* ====== Tags ====== */
+.pd-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pd-tag-green {
+  background: #ecfdf5;
+  color: #059669;
+}
+.pd-tag-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pd-views-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* ====== Meta Info Grid ====== */
+.pd-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+.pd-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  background: #fff;
+}
+.pd-meta-label {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.pd-meta-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* =====================================================
+   Right column: split into scrollable content + pinned bar
+   ===================================================== */
+.pd-right-col {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #f0f0f0;
+}
+
+/* Scrollable product info area */
+.pd-right-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 24px 12px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e5e5 transparent;
+}
+.pd-right-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.pd-right-scroll::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* ====== Pinned action bar — ALWAYS visible at bottom ====== */
+.pd-action-bar-pinned {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 16px 24px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.pd-action-msg {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+}
+
+/* Favorite button */
+.pd-action-fav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  flex-shrink: 0;
+  padding: 8px 0;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pd-action-fav:hover {
+  border-color: #d1d5db;
+  background: #fafafa;
+}
+.pd-action-fav-active {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #ef4444;
+}
+.pd-action-fav-active:hover {
+  border-color: #f87171;
+  background: #fee2e2;
+}
+
+/* Chat / Message button — bright yellow */
+.pd-action-chat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: none;
+  background: #fbbf24;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pd-action-chat:hover {
+  background: #f59e0b;
+  border-color: transparent;
+}
+.pd-action-chat:active {
+  transform: scale(0.98);
+}
+
+/* Buy Now button — dark */
+.pd-action-buy {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: none;
+  background: #1f2937;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pd-action-buy:hover {
+  background: #111827;
+  border-color: transparent;
+}
+.pd-action-buy:active {
+  transform: scale(0.98);
+}
+.pd-action-buy-disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+.pd-action-buy-disabled:hover {
+  background: #d1d5db;
+  border-color: transparent;
+}
+
+/* ====== Desktop: lock right column height to match left ====== */
+@media (min-width: 1024px) {
+  .pd-right-col {
+    width: 45%;
+    max-height: 520px;
+  }
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 1023px) {
+  .pd-right-col {
+    border-left: none;
+    border-top: 1px solid #f0f0f0;
+  }
+  .pd-thumb-col {
+    flex-direction: row;
+    width: auto;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .pd-thumb-item {
+    width: 60px;
+    height: 60px;
+  }
+  .pd-main-image-wrap {
+    aspect-ratio: 4 / 3;
+    max-height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .pd-card-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .pd-price {
+    font-size: 1.75rem;
+  }
+  .pd-action-bar-pinned {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+  .pd-action-fav {
+    width: 100%;
+    flex-direction: row;
+    gap: 6px;
+  }
+  .pd-action-chat,
+  .pd-action-buy {
+    min-width: 0;
+  }
+  .pd-right-scroll {
+    padding: 16px;
+  }
+  .pd-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}

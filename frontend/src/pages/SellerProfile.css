@@ -1,0 +1,545 @@
+/* ====== Seller Profile — Xianyu three-tiered layout ====== */
+
+.sp-page {
+  min-height: 100vh;
+  background: #f0f0f0;
+}
+
+/* ── Loading / Error ── */
+
+.sp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.sp-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: sp-spin 0.7s linear infinite;
+}
+
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sp-error-text {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.sp-back-home-btn {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #fbbf24;
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.sp-back-home-btn:hover {
+  background: #f59e0b;
+}
+
+/* ══════════════════════════════════════
+   Layer 2 — Wide Orange Textured Banner
+   ══════════════════════════════════════ */
+
+.sp-banner {
+  background: linear-gradient(160deg, #ff8c00 0%, #e06b00 40%, #c45500 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative circle — top right */
+.sp-banner::before {
+  content: "";
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+/* Decorative circle — bottom left */
+.sp-banner::after {
+  content: "";
+  position: absolute;
+  bottom: -100px;
+  left: -40px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+/* Dot pattern overlay via repeating radial gradient */
+.sp-banner-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Extra wave / stripe accent along the bottom */
+.sp-banner-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, rgba(0,0,0,0.08), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sp-banner-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 28px 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Back button */
+.sp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: background 0.15s;
+}
+
+.sp-back-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Profile row inside banner */
+.sp-banner-profile {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.sp-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  background: #e5e7eb;
+}
+
+.sp-banner-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sp-name {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.sp-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.sp-bio {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Frosted Stats Card — overlaps banner bottom ── */
+
+.sp-stats-card {
+  position: relative;
+  z-index: 3;
+  max-width: 1120px;
+  margin: -28px auto 0;
+  padding: 0 28px;
+}
+
+.sp-stats-card-inner {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.sp-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 12px;
+  gap: 2px;
+  transition: background 0.15s;
+}
+
+.sp-stat:hover {
+  background: rgba(255, 138, 0, 0.04);
+}
+
+.sp-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #c45500;
+  line-height: 1.1;
+}
+
+.sp-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #78716c;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sp-stat-divider {
+  width: 1px;
+  background: #f0ebe4;
+  align-self: stretch;
+  margin: 14px 0;
+}
+
+/* ══════════════════════════════════════
+   Layer 3 — White Content Area
+   ══════════════════════════════════════ */
+
+.sp-content {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 28px 48px;
+}
+
+/* ── Tabs ── */
+
+.sp-tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.sp-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #9ca3af;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sp-tab:hover {
+  color: #374151;
+}
+
+.sp-tab-active {
+  color: #c45500;
+  border-bottom-color: #e06b00;
+}
+
+.sp-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.sp-tab-active .sp-tab-count {
+  background: #fff3e0;
+  color: #c45500;
+}
+
+/* ── Tab Content ── */
+
+.sp-tab-content {
+  background: #fff;
+  border-radius: 0 0 14px 14px;
+  padding: 24px;
+  min-height: 320px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Product Grid ── */
+
+.sp-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 960px) {
+  .sp-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .sp-product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sp-product-grid {
+    grid-template-columns: 1fr;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+}
+
+/* ── Empty State ── */
+
+.sp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px;
+  color: #9ca3af;
+  gap: 10px;
+}
+
+.sp-empty-icon {
+  opacity: 0.4;
+}
+
+.sp-empty p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ── Review Summary ── */
+
+.sp-review-summary {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.sp-review-avg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.sp-review-avg-num {
+  font-size: 44px;
+  font-weight: 800;
+  color: #c45500;
+  line-height: 1;
+}
+
+.sp-review-avg-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.sp-review-count {
+  font-size: 13px;
+  color: #78716c;
+  margin-top: 2px;
+}
+
+/* ── Review List ── */
+
+.sp-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sp-review-card {
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  padding: 16px 18px;
+  transition: box-shadow 0.15s;
+}
+
+.sp-review-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.sp-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sp-review-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-review-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff3e0;
+  color: #c45500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sp-review-username {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.sp-review-stars-sm {
+  display: flex;
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.sp-review-date {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.sp-review-comment {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.55;
+}
+
+.sp-review-nocomment {
+  color: #9ca3af;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 640px) {
+  .sp-banner-inner {
+    padding: 24px 16px 0;
+  }
+
+  .sp-avatar {
+    width: 72px;
+    height: 72px;
+    border-width: 3px;
+  }
+
+  .sp-name {
+    font-size: 22px;
+  }
+
+  .sp-banner-profile {
+    gap: 16px;
+  }
+
+  .sp-stats-card {
+    padding: 0 16px;
+    margin-top: -22px;
+  }
+
+  .sp-stat {
+    padding: 14px 8px;
+  }
+
+  .sp-stat-value {
+    font-size: 20px;
+  }
+
+  .sp-content {
+    padding: 12px 12px 32px;
+  }
+
+  .sp-tab-content {
+    padding: 16px;
+  }
+
+  .sp-review-avg-num {
+    font-size: 36px;
+  }
+}

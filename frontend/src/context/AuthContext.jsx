@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
     setStoredUser(next);
   }, []);
 
-  // App 启动时：有 token 则拉一次当前用户，刷新状态
+  // On app startup: fetch current user if token exists
   useEffect(() => {
     let cancelled = false;
     const token = getStoredToken();
@@ -40,14 +40,14 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  // 401 统一处理：任意接口返回 401 时 api 层会派发 auth:logout，这里同步清空 user
+  // Global 401 handler: clear user when api layer dispatches auth:logout
   useEffect(() => {
     const handleLogout = () => setUserState(null);
     window.addEventListener("auth:logout", handleLogout);
     return () => window.removeEventListener("auth:logout", handleLogout);
   }, []);
 
-  // 登录成功后派发 auth:login，这里拉一次当前用户以更新 context（避免只写了 localStorage 但 context 仍为 null）
+  // After login: fetch current user to update context (localStorage may have been set but context is still null)
   useEffect(() => {
     const handleLogin = () => {
       const token = getStoredToken();
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("auth:login", handleLogin);
   }, []);
 
-  /** 手动刷新当前用户（如编辑资料后可调用） */
+  /** Manually refresh current user (e.g. after profile edit) */
   const refreshUser = useCallback(() => {
     const token = getStoredToken();
     if (!token) return setUserState(null);

@@ -57,7 +57,10 @@ function ProductCard({ product, onUnfavorited }) {
   }
 
   return (
-    <div className={`product-card ${isSold ? "product-card-sold" : ""}`}>
+    <div
+      className={`product-card ${isSold ? "product-card-sold" : ""}`}
+      onClick={() => navigate(`/products/${product.id}`)}
+    >
       <div className="product-card-img-wrap">
         <img
           src={imgSrc}
@@ -70,23 +73,22 @@ function ProductCard({ product, onUnfavorited }) {
           }}
         />
         {isSold && <span className="product-card-sold-badge">SOLD</span>}
+
+        <button
+          className={`product-card-fav ${fav ? "product-card-fav-active" : ""}`}
+          onClick={toggleFav}
+          title={
+            isAuthenticated
+              ? (fav ? "Remove from favorites" : "Add to favorites")
+              : "Please log in first to manage favorites"
+          }
+        >
+          {fav ? "♥" : "♡"}
+        </button>
       </div>
 
       <div className="product-card-body">
-        <div className="product-card-title-row">
-          <h3 className="product-card-title">{product.name}</h3>
-          <button
-            className={`product-card-fav ${fav ? "product-card-fav-active" : ""}`}
-            onClick={toggleFav}
-            title={
-              isAuthenticated
-                ? (fav ? "Remove from favorites" : "Add to favorites")
-                : "Please log in first to manage favorites"
-            }
-          >
-            {fav ? "♥" : "♡"}
-          </button>
-        </div>
+        <h3 className="product-card-title">{product.name}</h3>
 
         <div className="product-card-meta">
           <p className="price">£{product.price}</p>
@@ -96,12 +98,6 @@ function ProductCard({ product, onUnfavorited }) {
         {categoryLabel && (
           <p className="product-card-category">{categoryLabel}</p>
         )}
-
-        <div className="product-card-actions">
-          <button onClick={() => navigate(`/products/${product.id}`)}>
-            View Details
-          </button>
-        </div>
       </div>
     </div>
   );

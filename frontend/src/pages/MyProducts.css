@@ -1,17 +1,10 @@
-.my-products {
-  min-height: 100vh;
-  padding: 24px;
-  background: #f4f6f8;
-}
-
 .my-products-header {
-  max-width: 900px;
-  margin: 0 auto 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 .my-products-header h1 {
@@ -20,138 +13,11 @@
   color: #1a1a1a;
 }
 
-.my-products-back {
-  color: #4f46e5;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.my-products-back:hover {
-  text-decoration: underline;
-}
-
 .my-products-msg,
 .my-products-error {
-  max-width: 900px;
-  margin: 20px auto;
+  margin: 20px 0;
 }
 
 .my-products-error {
   color: #c00;
-}
-
-.my-products-section {
-  max-width: 900px;
-  margin: 0 auto 20px;
-}
-
-.my-products-section-title {
-  margin: 0 0 10px;
-  font-size: 1.05rem;
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.my-products-list {
-  max-width: 900px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.my-products-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  display: flex;
-  flex-direction: column;
-}
-
-.my-products-card-image-wrap {
-  display: block;
-  aspect-ratio: 1;
-  overflow: hidden;
-}
-
-.my-products-card-image-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.my-products-card-body {
-  padding: 12px 14px;
-  flex: 1;
-}
-
-.my-products-card-body h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1.3;
-}
-
-.my-products-card-price {
-  margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #059669;
-}
-
-.my-products-card-meta {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: #666;
-}
-
-.my-products-card-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.my-products-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  border: none;
-  display: inline-block;
-}
-
-.my-products-btn-edit {
-  background: #4f46e5;
-  color: #fff;
-}
-
-.my-products-btn-edit:hover {
-  background: #4338ca;
-}
-
-.my-products-btn-delete {
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.my-products-btn-delete:hover {
-  background: #fee2e2;
-}
-
-.my-products-btn-boost {
-  background: #ecfeff;
-  color: #0e7490;
-}
-
-.my-products-btn-boost:hover {
-  background: #cffafe;
-}
-
-.my-products-btn-boost:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }

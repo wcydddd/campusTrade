@@ -25,7 +25,7 @@ const CONDITION_OPTIONS = [
 const ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-/** C3: review threshold (对接后端 ai_confidence) */
+/** C3: review threshold (maps to backend ai_confidence) */
 const AI_CONF_THRESHOLD = 0.75;
 
 /* ─── Helpers ─── */
@@ -69,9 +69,8 @@ function extractErrorMsg(data, fallback = "Request failed.") {
   return data?.message || fallback;
 }
 
-/** C3: 从后端响应里取 needs_review / ai_confidence（兼容不同返回结构） */
+/** C3: Extract needs_review / ai_confidence from backend response (handles different structures) */
 function extractReviewSignal(json) {
-  // 可能在顶层，也可能在 json.data 里
   const needsReview =
     json?.needs_review ??
     json?.data?.needs_review ??
@@ -94,7 +93,7 @@ function extractReviewSignal(json) {
   };
 }
 
-/** C3: 是否需要弹出确认 Dialog */
+/** C3: Whether to open the review confirmation dialog */
 function shouldOpenReviewDialog({ needsReview, aiConfidence }) {
   if (needsReview) return true;
   if (aiConfidence !== null && aiConfidence < AI_CONF_THRESHOLD) return true;
@@ -218,7 +217,7 @@ export default function PublishProduct() {
     }
   }
 
-  // 页面进入时先拉一次
+  // Fetch quota on page load
   useEffect(() => {
     fetchAiUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -288,7 +287,7 @@ export default function PublishProduct() {
     }
   }
 
-  /** C3: 打开 Review Dialog */
+  /** C3: Open Review Dialog */
   function openReviewDialog(payload, signal, mode) {
     setReviewDraft({
       title: payload?.title || "",
@@ -302,7 +301,7 @@ export default function PublishProduct() {
   }
 
   const categoryOptionsForDialog = useMemo(() => {
-    // dialog 里的 category 下拉，直接用后端 categories
+    // Use backend categories directly in dialog dropdown
     return Array.isArray(categories) ? categories : [];
   }, [categories]);
 
@@ -352,7 +351,7 @@ export default function PublishProduct() {
       const payload = json?.data || {};
       const signal = extractReviewSignal(json);
 
-      // C3: 满足条件才弹窗，否则直接填入
+      // C3: Open dialog if flagged; otherwise apply directly
       if (shouldOpenReviewDialog(signal)) {
         openReviewDialog(payload, signal, "preview");
         setAiMessage("AI result requires confirmation. Please review and apply.");
@@ -363,7 +362,7 @@ export default function PublishProduct() {
         );
       }
 
-      // ✅ C2：调用后刷新配额
+      // Refresh quota after AI call
       await fetchAiUsage();
     } catch (e) {
       setAiError(e.message || "AI preview failed.");
@@ -418,10 +417,10 @@ export default function PublishProduct() {
       const payload = json?.data || {};
       const signal = extractReviewSignal(json);
 
-      // 先把保存后的 image_url 记住（不影响 dialog）
+      // Store the saved image_url (does not affect dialog)
       if (json.image_url) setAiImageUrl(json.image_url);
 
-      // C3: 满足条件才弹窗，否则直接填入
+      // C3: Open dialog if flagged; otherwise apply directly
       if (shouldOpenReviewDialog(signal)) {
         openReviewDialog(payload, signal, "save");
         setAiMessage("AI result requires confirmation. Please review and apply.");
@@ -432,7 +431,7 @@ export default function PublishProduct() {
         );
       }
 
-      // ✅ C2：调用后刷新配额
+      // Refresh quota after AI call
       await fetchAiUsage();
     } catch (e) {
       setAiError(e.message || "AI smart publish failed.");
@@ -538,34 +537,40 @@ export default function PublishProduct() {
      ═══════════════════════════════════════════ */
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 px-4 py-6 md:px-8 md:py-10">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* ── Page header ── */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800">Publish Product</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Fill in details manually, or let AI auto-fill from an image
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#f4f4f4]">
+      {/* ── Full-width yellow header ── */}
+      <div className="w-full bg-[#FFDA00] px-4 py-10 text-center shadow-sm">
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+          Publish Product
+        </h1>
+        <p className="mt-2 text-sm font-medium text-yellow-900/60">
+          Fill in details manually, or let AI auto-fill from an image
+        </p>
+      </div>
 
+      <div className="mx-auto max-w-2xl space-y-6 px-4 py-6 md:px-8">
         {/* ═══════ AI Smart Recognition Card ═══════ */}
-        <section className="rounded-xl bg-white p-6 shadow-md ring-1 ring-black/5">
-          <div className="mb-1 flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-base">
+        <section className="overflow-hidden rounded-2xl bg-white shadow-lg shadow-blue-100/50">
+          {/* ── Gradient title bar ── */}
+          <div className="flex items-center gap-3 bg-gradient-to-r from-blue-50 via-indigo-50/80 to-blue-50 px-6 py-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
               🤖
             </span>
-            <h2 className="text-lg font-semibold text-gray-800">AI Smart Recognition</h2>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-gray-900">AI Smart Recognition</h2>
+              <p className="text-xs text-gray-500">Upload a photo and AI fills in the details</p>
+            </div>
 
             {/* ✅ C2: quota indicator */}
-            <div className="ml-auto text-sm text-gray-600">
+            <div className="ml-auto flex-shrink-0 text-sm">
               {aiUsageLoading ? (
-                <span>Checking quota…</span>
+                <span className="text-gray-400">Checking…</span>
               ) : aiRemaining === null ? (
-                <span>Quota: —</span>
+                <span className="text-gray-400">Quota: —</span>
               ) : (
-                <span>
-                  Today remaining:{" "}
-                  <b className={aiRemaining <= 0 ? "text-red-600" : "text-gray-800"}>
+                <span className="text-gray-500">
+                  Today:{" "}
+                  <b className={`text-base ${aiRemaining <= 0 ? "text-red-500" : "text-blue-600"}`}>
                     {aiRemaining}
                   </b>
                 </span>
@@ -573,13 +578,12 @@ export default function PublishProduct() {
             </div>
           </div>
 
-          <p className="mb-2 text-sm text-gray-500">
-            Upload a product photo and AI will generate the title, description and category for you
-          </p>
+          {/* ── Card body ── */}
+          <div className="space-y-4 px-6 pb-6 pt-5">
 
           {/* ✅ C2: usage error */}
           {aiUsageError && (
-            <div className="mb-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+            <div className="rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
               {aiUsageError}
             </div>
           )}
@@ -588,13 +592,13 @@ export default function PublishProduct() {
           <div
             role="button"
             tabIndex={0}
-            className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all ${
+            className={`relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border transition-all ${
               dragging
-                ? "border-indigo-500 bg-indigo-50"
+                ? "border-blue-400 bg-blue-50/60 shadow-inner"
                 : aiLocalPreview
-                ? "border-indigo-300 bg-indigo-50/30"
-                : "border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/40"
-            } ${aiLocalPreview ? "p-4" : "p-10"}`}
+                ? "border-blue-200 bg-gradient-to-b from-blue-50/30 to-white"
+                : "border-gray-200 bg-gradient-to-b from-gray-50/80 to-white hover:border-blue-300 hover:shadow-md"
+            } ${aiLocalPreview ? "p-5" : "py-14 px-6"}`}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
@@ -614,18 +618,18 @@ export default function PublishProduct() {
             />
 
             {aiLocalPreview ? (
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
                 <img
                   src={aiLocalPreview}
                   alt="Preview"
-                  className="h-36 w-36 flex-shrink-0 rounded-lg object-cover shadow"
+                  className="h-40 w-40 flex-shrink-0 rounded-xl object-cover shadow-md ring-1 ring-black/5"
                 />
                 <div className="text-center sm:text-left">
                   <p className="text-sm font-medium text-gray-700 break-all">{aiFile?.name}</p>
                   <p className="mt-0.5 text-xs text-gray-400">
                     {(aiFile?.size / 1024 / 1024).toFixed(2)} MB
                   </p>
-                  <p className="mt-2 text-xs text-indigo-500">Click or drag to replace image</p>
+                  <p className="mt-2 text-xs font-medium text-blue-500">Click or drag to replace image</p>
                   {aiImageUrl && (
                     <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                       Saved to server
@@ -635,36 +639,38 @@ export default function PublishProduct() {
               </div>
             ) : (
               <>
-                <svg
-                  className="mb-3 h-10 w-10 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                  />
-                </svg>
-                <p className="text-sm font-medium text-gray-600">Click to upload or drag an image here</p>
-                <p className="mt-1 text-xs text-gray-400">Supports JPG / PNG / WebP, max 10 MB</p>
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 shadow-sm">
+                  <svg
+                    className="h-8 w-8 text-blue-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-gray-700">Click to upload or drag an image here</p>
+                <p className="mt-1.5 text-xs text-gray-400">Supports JPG / PNG / WebP, max 10 MB</p>
               </>
             )}
 
             {/* Loading overlay */}
             {aiLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/80 backdrop-blur-sm">
-                <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600" />
-                <p className="text-sm font-medium text-indigo-600">AI is analysing your image…</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/80 backdrop-blur-sm">
+                <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-blue-200 border-t-blue-600" />
+                <p className="text-sm font-medium text-blue-600">AI is analysing your image…</p>
               </div>
             )}
           </div>
 
           {/* AI error */}
           {aiError && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
               <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
@@ -678,7 +684,7 @@ export default function PublishProduct() {
 
           {/* AI success / info */}
           {aiMessage && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+            <div className="flex items-start gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
               <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
@@ -692,12 +698,12 @@ export default function PublishProduct() {
 
           {/* AI action buttons */}
           {aiFile && (
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 disabled={aiLoading || aiRemaining === 0}
                 onClick={handleAiPreview}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-5 py-2.5 text-sm font-semibold text-blue-600 shadow-sm transition-all hover:bg-blue-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                 title={aiRemaining === 0 ? "No AI quota left today" : ""}
               >
                 {aiLoading ? <Spinner /> : "🔍"} AI Preview
@@ -706,7 +712,7 @@ export default function PublishProduct() {
                 type="button"
                 disabled={aiLoading || aiRemaining === 0}
                 onClick={handleAiSave}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                 title={aiRemaining === 0 ? "No AI quota left today" : ""}
               >
                 {aiLoading ? <Spinner className="border-white/40 border-t-white" /> : "🚀"}{" "}
@@ -714,19 +720,25 @@ export default function PublishProduct() {
               </button>
             </div>
           )}
+
+          </div>
         </section>
 
         {/* ═══════ Product Info Form Card ═══════ */}
-        <section className="rounded-xl bg-white p-6 shadow-md ring-1 ring-black/5">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Product Details</h2>
+        <section className="overflow-hidden rounded-2xl bg-white shadow-lg shadow-gray-200/60">
+          <div className="border-b border-gray-100 px-6 py-4">
+            <h2 className="text-lg font-bold text-gray-900">Product Details</h2>
+            <p className="mt-0.5 text-xs text-gray-400">Fill in the information below to list your item</p>
+          </div>
 
+          <div className="px-6 pb-6 pt-5">
           {/* AI image thumbnail (shown when AI has saved an image) */}
           {aiImageUrl && aiLocalPreview && (
-            <div className="mb-5 flex items-center gap-4 rounded-lg bg-indigo-50/60 p-3 ring-1 ring-indigo-100">
+            <div className="mb-5 flex items-center gap-4 rounded-xl bg-blue-50/50 p-3.5 ring-1 ring-blue-100">
               <img
                 src={aiLocalPreview}
                 alt="Product"
-                className="h-20 w-20 flex-shrink-0 rounded-lg object-cover shadow-sm"
+                className="h-20 w-20 flex-shrink-0 rounded-xl object-cover shadow-sm"
               />
               <div>
                 <p className="text-sm font-medium text-gray-700">AI-recognised product image</p>
@@ -735,7 +747,7 @@ export default function PublishProduct() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Title */}
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">
@@ -747,7 +759,7 @@ export default function PublishProduct() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={200}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -761,7 +773,7 @@ export default function PublishProduct() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full resize-y rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -769,17 +781,20 @@ export default function PublishProduct() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Price (&pound;) <span className="text-red-500">*</span>
+                  Price <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400">£</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pl-8 pr-4 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
@@ -788,7 +803,7 @@ export default function PublishProduct() {
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                 >
                   {CONDITION_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
@@ -807,7 +822,7 @@ export default function PublishProduct() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 {categories.length === 0 && <option value="">Loading…</option>}
                 {categories.map((c) => (
@@ -819,137 +834,141 @@ export default function PublishProduct() {
             </div>
 
             {/* Sustainable */}
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm font-medium text-gray-700 transition-all hover:border-blue-300 hover:bg-blue-50/30">
               <input
                 type="checkbox"
                 checked={sustainable}
                 onChange={(e) => setSustainable(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-400"
               />
+              <span>🌱</span>
               Sustainable / Recyclable
             </label>
 
             {/* Manual image upload */}
             <div>
-              <label className="mb-1 block text-sm font-semibold text-gray-700">
-                Upload images (optional, jpg / png / webp)
+              <label className="mb-2 block text-sm font-semibold text-gray-700">
+                Product Images
               </label>
               {aiImageUrl && (
-                <p className="mb-2 text-xs text-indigo-600">
+                <p className="mb-3 text-xs text-blue-600">
                   AI image is already included. You can add more images below.
                 </p>
               )}
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".jpg,.jpeg,.png,.webp"
-                    className="hidden"
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.files || []);
-                      if (!selected.length) return;
-                      const valid = [];
-                      for (const f of selected) {
-                        const err = validateImageFile(f);
-                        if (!err) valid.push({ file: f, preview: URL.createObjectURL(f) });
-                      }
-                      setImageFiles((prev) => [...prev, ...valid]);
-                      e.target.value = "";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-                  >
-                    Choose file
-                  </button>
-                  <span className="truncate text-sm text-gray-500">
-                    {imageFiles.length > 0 ? `${imageFiles.length} image(s) selected` : "No file chosen"}
-                  </span>
-                </div>
-                {imageFiles.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {imageFiles.map((item, idx) => (
-                      <div key={`${item.file.name}-${idx}`} className="rounded-lg border border-gray-200 bg-white p-2">
-                        <img
-                          src={item.preview}
-                          alt={item.file.name}
-                          className="h-24 w-full rounded object-cover"
-                        />
-                        <p className="mt-1 truncate text-xs text-gray-500">{item.file.name}</p>
-                        <div className="mt-2 flex gap-2">
-                          <button
-                            type="button"
-                            className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
-                            disabled={idx === 0}
-                            onClick={() =>
-                              setImageFiles((prev) => {
-                                const arr = [...prev];
-                                [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-                                return arr;
-                              })
-                            }
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
-                            disabled={idx === imageFiles.length - 1}
-                            onClick={() =>
-                              setImageFiles((prev) => {
-                                const arr = [...prev];
-                                [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
-                                return arr;
-                              })
-                            }
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-600"
-                            onClick={() =>
-                              setImageFiles((prev) => {
-                                const target = prev[idx];
-                                if (target?.preview) URL.revokeObjectURL(target.preview);
-                                return prev.filter((_, i) => i !== idx);
-                              })
-                            }
-                          >
-                            Remove
-                          </button>
-                        </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const selected = Array.from(e.target.files || []);
+                  if (!selected.length) return;
+                  const valid = [];
+                  for (const f of selected) {
+                    const err = validateImageFile(f);
+                    if (!err) valid.push({ file: f, preview: URL.createObjectURL(f) });
+                  }
+                  setImageFiles((prev) => [...prev, ...valid]);
+                  e.target.value = "";
+                }}
+              />
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {imageFiles.map((item, idx) => (
+                  <div key={`${item.file.name}-${idx}`} className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white">
+                    <img
+                      src={item.preview}
+                      alt={item.file.name}
+                      className="aspect-square w-full object-cover"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/50 to-transparent px-2 pb-2 pt-6 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm"
+                          disabled={idx === 0}
+                          onClick={() =>
+                            setImageFiles((prev) => {
+                              const arr = [...prev];
+                              [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                              return arr;
+                            })
+                          }
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm"
+                          disabled={idx === imageFiles.length - 1}
+                          onClick={() =>
+                            setImageFiles((prev) => {
+                              const arr = [...prev];
+                              [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+                              return arr;
+                            })
+                          }
+                        >
+                          ↓
+                        </button>
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        className="rounded-lg bg-red-500/90 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm"
+                        onClick={() =>
+                          setImageFiles((prev) => {
+                            const target = prev[idx];
+                            if (target?.preview) URL.revokeObjectURL(target.preview);
+                            return prev.filter((_, i) => i !== idx);
+                          })
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                )}
+                ))}
+
+                {/* Add image button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-gray-400 transition-all hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-500"
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span className="text-xs font-semibold">Add Images</span>
+                </button>
+              </div>
+              {imageFiles.length > 0 && (
+                <p className="mt-2 text-xs text-gray-400">{imageFiles.length} image(s) selected · JPG, PNG, WebP</p>
+              )}
             </div>
 
             {/* Error & Success */}
             {error && (
-              <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">
+              <div className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
                 {error}
               </div>
             )}
             {success && (
-              <div className="rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">
+              <div className="rounded-xl bg-green-50 px-4 py-2.5 text-sm text-green-700">
                 {success}
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-4 pt-2">
+            <div className="flex items-center gap-5 pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                className="rounded-full bg-[#FFDA00] px-10 py-3 text-sm font-extrabold text-gray-900 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
-                    <Spinner className="border-white/40 border-t-white" />
+                    <Spinner className="border-gray-900/30 border-t-gray-900" />
                     Publishing…
                   </span>
                 ) : (
@@ -958,12 +977,13 @@ export default function PublishProduct() {
               </button>
               <Link
                 to="/home"
-                className="text-sm text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
+                className="text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
               >
                 Back to Home
               </Link>
             </div>
           </form>
+          </div>
         </section>
       </div>
 

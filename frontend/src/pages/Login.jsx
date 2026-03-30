@@ -7,12 +7,12 @@ export default function Login() {
   const token = getStoredToken();
   if (token) return <Navigate to="/home" replace />;
 
-  // 表单状态
+  // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
-  // 交互状态
+  // UI state
   const [touched, setTouched] = useState({ email: false, password: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +21,7 @@ export default function Login() {
   const location = useLocation();
   const from = location.state?.from?.pathname || "/home";
 
-  // 邮箱校验规则
+  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.(ac\.uk|edu)$/i;
 
   const emailError = !email
@@ -172,16 +172,6 @@ export default function Login() {
                 )}
               </div>
             )}
-            <div>
-              <button
-                type="button"
-                onClick={() => alert("Forgot Password feature coming soon")}
-                className="text-indigo-600 hover:text-indigo-500"
-              >
-                Forgot your password?
-              </button>
-            </div>
-
             {/* Submit */}
             <button
               type="submit"

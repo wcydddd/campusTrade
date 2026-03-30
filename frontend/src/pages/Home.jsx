@@ -19,12 +19,9 @@ function buildQuery(params) {
   return qs ? `?${qs}` : "";
 }
 
-// ✅ C1：统一把后端返回的相对路径补成可访问的 URL
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
-  // 已经是绝对地址 / data URL
   if (url.startsWith("http") || url.startsWith("data:")) return url;
-  // 相对地址（可能是 /uploads/xxx 或 uploads/xxx）
   return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
 }
 
@@ -51,14 +48,12 @@ function Home() {
   const [trending, setTrending] = useState([]);
   const { unreadCount } = useUnread();
 
-  // 筛选状态
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sustainable, setSustainable] = useState(false);
 
-  // 获取分类
   useEffect(() => {
     let cancelled = false;
     async function fetchCategories() {
@@ -74,7 +69,6 @@ function Home() {
     return () => { cancelled = true; };
   }, []);
 
-  // 获取热门榜单
   useEffect(() => {
     let cancelled = false;
     async function fetchTrending() {
@@ -106,7 +100,6 @@ function Home() {
     return () => { cancelled = true; };
   }, []);
 
-  // 获取商品
   useEffect(() => {
     let cancelled = false;
 
@@ -149,12 +142,10 @@ function Home() {
     };
   }, [search, category, minPrice, maxPrice, sustainable]);
 
-  // ✅ C1：列表页要“优先 thumb_url”，并保留 image_url 给详情页用
   const normalizedProducts = useMemo(() => {
     const placeholder = "https://placehold.co/400x400";
 
     return products.map((p) => {
-      // 兼容不同字段命名（后端可能叫 thumb_url / image_url / images）
       const thumbRaw =
         p.thumb_url ||
         p.thumbnail_url ||
@@ -194,7 +185,6 @@ function Home() {
     setSustainable(false);
   }
 
-  // Me dropdown
   const [meMenuOpen, setMeMenuOpen] = useState(false);
   const meMenuRef = useRef(null);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
@@ -247,319 +237,346 @@ function Home() {
 
   return (
     <div className="home">
-      <div className="home-hero">
-        <div className="home-hero-head">
-          <div className="home-intro">
-            <div className="home-intro-main">
-              <div className="home-intro-copy">
-                <h1 className="home-title">CampusTrade Marketplace</h1>
-                <p className="home-subtitle">
-                  Buy / sell / exchange items within your campus.
-                </p>
-              </div>
-
-              <div className="home-hero-logo">
-                <img
-                  src={campusTradeLogo}
-                  alt="CampusTrade logo"
-                  className="home-hero-logo-image"
-                />
-              </div>
-            </div>
+      <header className="ct-header">
+        <div className="ct-header-inner">
+          <div className="ct-brand">
+            <img
+              src={campusTradeLogo}
+              alt="CampusTrade logo"
+              className="ct-brand-logo"
+            />
+            <span className="ct-brand-name">CampusTrade</span>
           </div>
 
-          <div className="home-topbar">
-            <div className="home-header-actions">
-              {!authLoading && !isAuthenticated && (
-                <div className="home-topbar-layout home-topbar-layout-guest">
-                  <div className="home-utility-grid home-utility-grid-guest">
-                    <Link to="/login" className="home-utility-link">
-                      <span className="home-nav-link-text">Login</span>
-                    </Link>
-                    <Link to="/register" className="home-utility-link">
-                      <span className="home-nav-link-text">Register</span>
-                    </Link>
-                    <button
-                      type="button"
-                      className="home-utility-link home-utility-button"
-                      onClick={() => requireLogin("Please log in first to publish a product.")}
-                    >
-                      <span className="home-nav-link-text">Publish product</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {isAuthenticated && (
-                <div className="home-header-toolbar">
-                  <div className="home-topbar-layout">
-                    <div className="home-utility-grid">
-                      <NotificationBell variant="utility" />
-
-                      <Link to="/conversations" className="home-utility-link">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <span className="home-nav-link-text">Messages</span>
-                        {unreadCount > 0 && (
-                          <span className="unread-badge">
-                            {unreadCount > 99 ? "99+" : unreadCount}
-                          </span>
-                        )}
-                      </Link>
-
-                      <Link to="/publish" className="home-utility-link">
-                        <span className="home-nav-link-text">Publish product</span>
-                      </Link>
-
-                      {userQuickLinks.map((item) => (
-                        <Link key={item.to} to={item.to} className="home-utility-link">
-                          <span className="home-nav-link-text">{item.label}</span>
-                        </Link>
-                      ))}
-                    </div>
-
-                    <div className="home-menu-rail">
-                      {currentUser?.role === "admin" && (
-                        <div className="admin-dropdown" ref={adminMenuRef}>
-                          <button
-                            type="button"
-                            className="header-menu-trigger"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAdminMenuOpen((v) => !v);
-                              setMeMenuOpen(false);
-                            }}
-                          >
-                            <span className="header-menu-icon" aria-hidden="true">
-                              ⚙
-                            </span>
-                            <span className="header-menu-copy">
-                              <span className="header-menu-label">Admin</span>
-                              <span className="header-menu-name">Management</span>
-                            </span>
-                            <span className={`me-arrow ${adminMenuOpen ? "me-arrow-open" : ""}`}>
-                              ▼
-                            </span>
-                          </button>
-
-                          {adminMenuOpen && (
-                            <ul className="me-dropdown-menu admin-dropdown-menu">
-                              <li>
-                                <Link to="/admin/review" onClick={() => setAdminMenuOpen(false)}>
-                                  Product review
-                                </Link>
-                              </li>
-                              <li>
-                                <Link to="/admin/users" onClick={() => setAdminMenuOpen(false)}>
-                                  User management
-                                </Link>
-                              </li>
-                            </ul>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="me-dropdown" ref={meMenuRef}>
-                        <button
-                          type="button"
-                          className="user-menu-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMeMenuOpen((v) => !v);
-                            setAdminMenuOpen(false);
-                          }}
-                        >
-                          <UserAvatar avatarUrl={userAvatarUrl} label={userLabel} />
-                          <span className="user-menu-copy">
-                            <span className="user-menu-label">Account</span>
-                            <span className="user-menu-name">{userLabel}</span>
-                          </span>
-                          <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
-                            ▼
-                          </span>
-                        </button>
-
-                        {meMenuOpen && (
-                          <ul className="me-dropdown-menu">
-                            <li>
-                              <Link to="/me" onClick={() => setMeMenuOpen(false)}>
-                                My profile
-                              </Link>
-                            </li>
-                            <li>
-                              <Link to="/my-products" onClick={() => setMeMenuOpen(false)}>
-                                Manage my products
-                              </Link>
-                            </li>
-                            <li className="me-dropdown-divider" />
-                            <li>
-                              <button
-                                type="button"
-                                className="dropdown-action"
-                                onClick={() => {
-                                  setMeMenuOpen(false);
-                                  handleLogout();
-                                }}
-                              >
-                                Log out
-                              </button>
-                            </li>
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="home-hero-body">
-          <div className="home-filter-panel">
+          <div className="ct-search">
+            <svg className="ct-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             <input
-              className="search-input"
               type="text"
+              className="ct-search-input"
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-
-            <div className="filters-row">
-              <select
-                className="filter-control"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="filter-control"
-                type="number"
-                min="0"
-                placeholder="Min £"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-              />
-
-              <input
-                className="filter-control"
-                type="number"
-                min="0"
-                placeholder="Max £"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-              />
-
-              <label
-                className="filter-control"
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={sustainable}
-                  onChange={(e) => setSustainable(e.target.checked)}
-                />
-                Sustainable
-              </label>
-
-              <button className="clear-btn" onClick={clearFilters}>
-                Clear
-              </button>
-            </div>
+            <button className="ct-search-btn" onClick={clearFilters}>
+              Clear
+            </button>
           </div>
 
-          <div className="hero-info-panel">
-            <div className="hero-info-head">
-              <span className="hero-info-eyebrow">Campus marketplace</span>
-              <h2 className="hero-info-title">Student trading, campus-first.</h2>
-              <p className="hero-info-text">
-                Browse affordable second-hand essentials, exchange with nearby students, and keep
-                good items in circulation longer.
-              </p>
+          <nav className="ct-nav">
+            {!authLoading && !isAuthenticated && (
+              <>
+                <Link to="/login" className="ct-nav-item">Login</Link>
+                <Link to="/register" className="ct-nav-item">Register</Link>
+                <button
+                  type="button"
+                  className="ct-nav-item ct-nav-highlight"
+                  onClick={() => requireLogin("Please log in first to publish a product.")}
+                >
+                  Publish
+                </button>
+              </>
+            )}
+
+            {isAuthenticated && (
+              <>
+                <NotificationBell variant="utility" />
+
+                <Link to="/conversations" className="ct-nav-item">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>Messages</span>
+                  {unreadCount > 0 && (
+                    <span className="unread-badge">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link to="/publish" className="ct-nav-item ct-nav-highlight">
+                  Publish
+                </Link>
+
+                {currentUser?.role === "admin" && (
+                  <div className="admin-dropdown" ref={adminMenuRef}>
+                    <button
+                      type="button"
+                      className="ct-nav-item"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAdminMenuOpen((v) => !v);
+                        setMeMenuOpen(false);
+                      }}
+                    >
+                      <span>Admin</span>
+                      <span className={`me-arrow ${adminMenuOpen ? "me-arrow-open" : ""}`}>
+                        ▼
+                      </span>
+                    </button>
+
+                    {adminMenuOpen && (
+                      <ul className="me-dropdown-menu admin-dropdown-menu">
+                        <li>
+                          <Link to="/admin/review" onClick={() => setAdminMenuOpen(false)}>
+                            Product review
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/admin/users" onClick={() => setAdminMenuOpen(false)}>
+                            User management
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                <div className="me-dropdown" ref={meMenuRef}>
+                  <button
+                    type="button"
+                    className="ct-nav-item ct-account-trigger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMeMenuOpen((v) => !v);
+                      setAdminMenuOpen(false);
+                    }}
+                  >
+                    <UserAvatar avatarUrl={userAvatarUrl} label={userLabel} />
+                    <span>{userLabel}</span>
+                    <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
+                      ▼
+                    </span>
+                  </button>
+
+                  {meMenuOpen && (
+                    <ul className="me-dropdown-menu">
+                      <li>
+                        <Link to="/me" onClick={() => setMeMenuOpen(false)}>
+                          My profile
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/my-products" onClick={() => setMeMenuOpen(false)}>
+                          Manage my products
+                        </Link>
+                      </li>
+                      <li className="me-dropdown-divider" />
+                      {userQuickLinks.map((item) => (
+                        <li key={item.to}>
+                          <Link to={item.to} onClick={() => setMeMenuOpen(false)}>
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                      <li className="me-dropdown-divider" />
+                      <li>
+                        <button
+                          type="button"
+                          className="dropdown-action"
+                          onClick={() => {
+                            setMeMenuOpen(false);
+                            handleLogout();
+                          }}
+                        >
+                          Log out
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      <div className="ct-main">
+        <div className="ct-main-inner">
+          <aside className="ct-sidebar">
+            <div className="ct-sidebar-section">
+              <h3 className="ct-sidebar-heading">Categories</h3>
+              <ul className="ct-cat-list">
+                {categories.map((c) => (
+                  <li key={c}>
+                    <button
+                      type="button"
+                      className={`ct-cat-item ${category === c ? "ct-cat-active" : ""}`}
+                      onClick={() => setCategory(c)}
+                    >
+                      <span className="ct-cat-icon" aria-hidden="true" />
+                      <span className="ct-cat-label">{c}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="hero-info-stats">
-              {heroStats.map((item) => (
-                <div key={item.label} className="hero-info-stat">
-                  <span className="hero-info-stat-value">{item.value}</span>
-                  <span className="hero-info-stat-label">{item.label}</span>
+            <div className="ct-sidebar-divider" />
+
+            <div className="ct-sidebar-section">
+              <h3 className="ct-sidebar-heading">Price Range</h3>
+              <div className="ct-sidebar-prices">
+                <input
+                  className="ct-sidebar-input"
+                  type="number"
+                  min="0"
+                  placeholder="Min £"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                />
+                <span className="ct-sidebar-dash">—</span>
+                <input
+                  className="ct-sidebar-input"
+                  type="number"
+                  min="0"
+                  placeholder="Max £"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="ct-sidebar-divider" />
+
+            <label className="ct-sidebar-check">
+              <input
+                type="checkbox"
+                checked={sustainable}
+                onChange={(e) => setSustainable(e.target.checked)}
+              />
+              <span className="ct-sidebar-eco" aria-hidden="true">🌱</span>
+              Sustainable only
+            </label>
+          </aside>
+
+          <div className="ct-right">
+            <div className="ct-dashboard">
+              {heroStats.map((item, idx) => (
+                <div key={item.label} className={`ct-dash-card ct-dash-card-${idx}`}>
+                  <span className="ct-dash-value">{item.value}</span>
+                  <span className="ct-dash-label">{item.label}</span>
                 </div>
               ))}
             </div>
 
-            <div className="hero-info-detail">
-              <div className="hero-info-detail-head">
-                <span className="hero-info-detail-title">How it works</span>
-                <p className="hero-info-detail-text">
-                  A simple path from browsing to a smooth campus exchange.
-                </p>
-              </div>
+            <div className="ct-guide-strip">
+              {heroGuideSteps.map((step, idx) => (
+                <div key={step} className={`ct-guide-card ct-guide-card-${idx}`}>
+                  <p>{step}</p>
+                </div>
+              ))}
+            </div>
 
-              <div className="hero-info-notes">
-                {heroGuideSteps.map((item) => (
-                  <div key={item} className="hero-info-note">
-                    <span className="hero-info-note-dot" aria-hidden="true" />
-                    <p>{item}</p>
-                  </div>
-                ))}
+            {trending.length > 0 && (
+              <div className="trending-section">
+                <h2 className="trending-title">Trending</h2>
+                <div className="trending-scroll">
+                  {trending.map((p) => (
+                    <div key={p.id} className="trending-item" onClick={() => navigate(`/products/${p.id}`)}>
+                      <img src={p.thumb} alt={p.name} onError={(e) => { e.currentTarget.src = "https://placehold.co/200x200"; }} />
+                      <p className="trending-item-name">{p.name}</p>
+                      <p className="trending-item-price">£{p.price}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            <div className="product-list">
+              {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}
+              {error && (
+                <p style={{ marginTop: 20, color: "red" }}>{error}</p>
+              )}
+
+              {!loading &&
+                !error &&
+                normalizedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+
+              {!loading && !error && normalizedProducts.length === 0 && (
+                <p style={{ marginTop: 20 }}>No products found.</p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {trending.length > 0 && (
-        <div className="trending-section">
-          <h2 className="trending-title">Trending</h2>
-          <div className="trending-scroll">
-            {trending.map((p) => (
-              <div key={p.id} className="trending-item" onClick={() => navigate(`/products/${p.id}`)}>
-                <img src={p.thumb} alt={p.name} onError={(e) => { e.currentTarget.src = "https://placehold.co/200x200"; }} />
-                <p className="trending-item-name">{p.name}</p>
-                <p className="trending-item-price">£{p.price}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="product-list">
-        {loading && <p style={{ marginTop: 20 }}>Loading products...</p>}
-        {error && (
-          <p style={{ marginTop: 20, color: "red" }}>{error}</p>
+      {/* Floating action bar */}
+      <aside className="ct-fab">
+        {isAuthenticated ? (
+          <Link to="/publish" className="ct-fab-publish" title="Publish product">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className="ct-fab-publish"
+            title="Publish product"
+            onClick={() => requireLogin("Please log in first to publish a product.")}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
         )}
+        <span className="ct-fab-text">Publish</span>
 
-        {!loading &&
-          !error &&
-          normalizedProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+        {isAuthenticated && (
+          <>
+            <div className="ct-fab-divider" />
 
-        {!loading && !error && normalizedProducts.length === 0 && (
-          <p style={{ marginTop: 20 }}>No products found.</p>
+            <Link to="/my-orders" className="ct-fab-link" title="My orders">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              <span>Orders</span>
+            </Link>
+
+            <Link to="/my-favorites" className="ct-fab-link" title="My favorites">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              <span>Favorites</span>
+            </Link>
+
+            <Link to="/my-reviews" className="ct-fab-link" title="My reviews">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>Reviews</span>
+            </Link>
+
+            <Link to="/recent-viewed" className="ct-fab-link" title="Recently viewed">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>Recent</span>
+            </Link>
+          </>
         )}
-      </div>
+      </aside>
     </div>
   );
 }

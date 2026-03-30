@@ -14,7 +14,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
     let cancelled = false;
 
     async function run() {
-      // 没 token：直接拦截
+      // No token: block immediately
       if (!token || token.trim() === "") {
         if (!cancelled) {
           setOk(false);
@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
         const me = await getMe(); // GET /users/me
         if (cancelled) return;
 
-        // 存一份给页面用（Home/logout 也会清）
+        // Cache for page use (cleared on Home/logout)
         setStoredUser(me);
 
         if (requireVerified && me?.is_verified === false) {
@@ -38,7 +38,7 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
           setOk(true);
         }
       } catch (e) {
-        // token 无效/过期：自动登出
+        // Invalid/expired token: auto logout
         logout();
         if (!cancelled) setOk(false);
       } finally {
@@ -56,10 +56,10 @@ export default function ProtectedRoute({ children, requireVerified = false }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (checking) return null; // 你也可以换成 Loading...
+  if (checking) return null;
 
   if (blockedByVerify) {
-    // 未验证：引导去 verify-email（把 email 带上更友好）
+    // Not verified: redirect to verify-email (include email for convenience)
     let email = "";
     try {
       const u = getStoredUser() || {};

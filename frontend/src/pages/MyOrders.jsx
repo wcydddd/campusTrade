@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
+import UserCenterSidebar from "../components/UserCenterSidebar";
 import "./MyOrders.css";
 
 const STATUS_LABEL = {
@@ -51,7 +52,7 @@ export default function MyOrders() {
   const [focusedId, setFocusedId] = useState("");
 
   useEffect(() => {
-    // focus 变化时重置“一次性自动切 tab”
+    // Reset one-time auto tab switch on focus change
     switchedTabRef.current = false;
     setFocusedId(focusOrderId || "");
   }, [focusOrderId]);
@@ -84,11 +85,11 @@ export default function MyOrders() {
     const el = orderRefs.current[focusedId];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      // 高亮几秒
+      // Highlight for a few seconds
       const t = setTimeout(() => setFocusedId(""), 2800);
       return () => clearTimeout(t);
     }
-    // 当前 tab 没找到，就自动切换一次到另一 tab 再找
+    // Not found in current tab; auto-switch to the other tab once
     if (!switchedTabRef.current) {
       switchedTabRef.current = true;
       setTab((prev) => (prev === "buyer" ? "seller" : "buyer"));
@@ -96,7 +97,7 @@ export default function MyOrders() {
   }, [loading, error, focusedId, tab, orders]);
 
   async function updateStatus(orderId, action) {
-    // 防止按钮点击触发卡片跳转
+    // Prevent button click from triggering card navigation
     try {
       const res = await authFetch(`${API_BASE}/orders/${orderId}/${action}`, { method: "PATCH" });
       if (res.ok) {
@@ -136,7 +137,7 @@ export default function MyOrders() {
       if (!res.ok) {
         const msg = data.detail || data.message || "Failed to submit review";
         setReviewMsg(msg);
-        // 如果后端提示已评价过，也直接隐藏按钮，避免反复点
+        // If backend says already reviewed, hide button to prevent repeated clicks
         if (res.status === 409) {
           setOrders((prev) =>
             prev.map((o) => (o.id === reviewOrder.id ? { ...o, _reviewed_by_me: true } : o))
@@ -162,85 +163,121 @@ export default function MyOrders() {
   const fallbackImg = "https://placehold.co/80x80";
 
   return (
-    <div className="my-orders">
-      <div className="my-orders-top">
-        <h1>My Orders</h1>
-        <Link to="/home" className="my-orders-back">Back to Home</Link>
-      </div>
+    <div className="min-h-screen bg-[#f4f4f4]">
+      <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4 pb-10">
+        <UserCenterSidebar />
 
-      <div className="my-orders-tabs">
-        <button className={`tab-btn ${tab === "buyer" ? "tab-active" : ""}`} onClick={() => setTab("buyer")}>
-          As Buyer
-        </button>
-        <button className={`tab-btn ${tab === "seller" ? "tab-active" : ""}`} onClick={() => setTab("seller")}>
-          As Seller
-        </button>
-      </div>
+        <div className="my-orders flex-1 min-w-0 bg-white rounded-2xl shadow-sm p-6">
+          <div className="my-orders-top">
+            <h1>My Orders</h1>
+            <Link to="/home" className="my-orders-back">Back to Home</Link>
+          </div>
 
-      {loading && <p className="my-orders-msg">Loading...</p>}
-      {error && <p className="my-orders-error">{error}</p>}
+          <div className="my-orders-tabs">
+            <button className={`tab-btn ${tab === "buyer" ? "tab-active" : ""}`} onClick={() => setTab("buyer")}>
+              As Buyer
+            </button>
+            <button className={`tab-btn ${tab === "seller" ? "tab-active" : ""}`} onClick={() => setTab("seller")}>
+              As Seller
+            </button>
+          </div>
 
-      {!loading && !error && orders.length === 0 && (
-        <p className="my-orders-msg">No orders yet.</p>
-      )}
+          {loading && <p className="my-orders-msg">Loading...</p>}
+          {error && <p className="my-orders-error">{error}</p>}
 
-      {!loading && !error && orders.length > 0 && (
-        <div className="my-orders-list">
-          {orders.map((order) => {
-            const img = resolveMediaUrl(order.product_image || order.product?.images?.[0]) || fallbackImg;
-            const isFocused = focusedId && order.id === focusedId;
-            return (
-              <div
-                key={order.id}
-                className="order-card"
-                role="button"
-                tabIndex={0}
-                ref={(node) => {
-                  if (node) orderRefs.current[order.id] = node;
-                }}
-                onClick={() => navigate(`/orders/${order.id}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") navigate(`/orders/${order.id}`);
-                }}
-                style={
-                  isFocused
-                    ? { border: "2px solid #4f46e5", boxShadow: "0 0 0 4px rgba(79,70,229,0.15)" }
-                    : undefined
-                }
-              >
-                <img src={img} alt="" className="order-card-img" onError={(e) => { e.currentTarget.src = fallbackImg; }} />
-                <div className="order-card-body">
-                  <h3>{order.product_title || order.product?.title || "Product"}</h3>
-                  <p className="order-card-price">£{order.price ?? order.product?.price ?? "-"}</p>
-                  <p className="order-card-meta">
-                    {tab === "buyer" ? `Seller: ${order.seller_name || "—"}` : `Buyer: ${order.buyer_name || "—"}`}
-                  </p>
-                  <span className={`order-status ${STATUS_CLASS[order.status] || ""}`}>
-                    {STATUS_LABEL[order.status] || order.status}
-                  </span>
-                </div>
-                <div className="order-card-actions">
-                  {tab === "seller" && order.status === "pending" && (
-                    <>
-                      <button className="btn-confirm" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "confirm"); }}>Confirm</button>
-                      <button className="btn-cancel" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "cancel"); }}>Cancel</button>
-                    </>
-                  )}
-                  {order.status === "confirmed" && (
-                    <button className="btn-complete" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "complete"); }}>Complete</button>
-                  )}
-                  {tab === "buyer" && order.status === "pending" && (
-                    <button className="btn-cancel" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "cancel"); }}>Cancel</button>
-                  )}
-                  {order.status === "completed" && !order.reviewed_by_me && !order._reviewed_by_me && (
-                    <button className="btn-complete" onClick={(e) => { e.stopPropagation(); openReview(order); }}>Review</button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {!loading && !error && orders.length === 0 && (
+            <div className="my-orders-empty">
+              <svg className="my-orders-empty-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              <p className="my-orders-empty-text">No orders yet</p>
+              <p className="my-orders-empty-hint">Your orders will appear here once you buy or sell something</p>
+            </div>
+          )}
+
+          {!loading && !error && orders.length > 0 && (
+            <div className="my-orders-list">
+              {orders.map((order) => {
+                const img = resolveMediaUrl(order.product_image || order.product?.images?.[0]) || fallbackImg;
+                const isFocused = focusedId && order.id === focusedId;
+                return (
+                  <div
+                    key={order.id}
+                    className="order-card"
+                    role="button"
+                    tabIndex={0}
+                    ref={(node) => {
+                      if (node) orderRefs.current[order.id] = node;
+                    }}
+                    onClick={() => navigate(`/orders/${order.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") navigate(`/orders/${order.id}`);
+                    }}
+                    style={
+                      isFocused
+                        ? { border: "2px solid #4f46e5", boxShadow: "0 0 0 4px rgba(79,70,229,0.15)" }
+                        : undefined
+                    }
+                  >
+                    {/* ── Header ── */}
+                    <div className="order-card-header">
+                      <div className="order-card-peer">
+                        <span className="order-card-avatar" aria-hidden="true">
+                          {(tab === "buyer"
+                            ? order.seller_name
+                            : order.buyer_name
+                          )?.charAt(0)?.toUpperCase() || "?"}
+                        </span>
+                        <span className="order-card-peer-name">
+                          {tab === "buyer" ? (order.seller_name || "—") : (order.buyer_name || "—")}
+                        </span>
+                      </div>
+                      <span className={`order-status ${STATUS_CLASS[order.status] || ""}`}>
+                        {STATUS_LABEL[order.status] || order.status}
+                      </span>
+                    </div>
+
+                    {/* ── Body ── */}
+                    <div className="order-card-content">
+                      <img src={img} alt="" className="order-card-img" onError={(e) => { e.currentTarget.src = fallbackImg; }} />
+                      <div className="order-card-info">
+                        <h3>{order.product_title || order.product?.title || "Product"}</h3>
+                        <p className="order-card-qty">Qty: x1</p>
+                        <p className="order-card-price">
+                          <span className="order-card-price-sym">£</span>
+                          {order.price ?? order.product?.price ?? "-"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ── Footer ── */}
+                    <div className="order-card-actions">
+                      {tab === "seller" && order.status === "pending" && (
+                        <>
+                          <button className="btn-confirm" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "confirm"); }}>Confirm</button>
+                          <button className="btn-cancel" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "cancel"); }}>Cancel</button>
+                        </>
+                      )}
+                      {order.status === "confirmed" && (
+                        <button className="btn-complete" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "complete"); }}>Complete</button>
+                      )}
+                      {tab === "buyer" && order.status === "pending" && (
+                        <button className="btn-cancel" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, "cancel"); }}>Cancel</button>
+                      )}
+                      {order.status === "completed" && !order.reviewed_by_me && !order._reviewed_by_me && (
+                        <button className="btn-complete" onClick={(e) => { e.stopPropagation(); openReview(order); }}>Review</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </div>
-      )}
+      </div>
 
       {reviewOpen && (
         <div
