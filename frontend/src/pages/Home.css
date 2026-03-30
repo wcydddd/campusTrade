@@ -20,27 +20,27 @@
 .ct-header-inner {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 10px 24px;
+  padding: 6px 24px;
 }
 
 .ct-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
 .ct-brand-logo {
-  width: 44px;
-  height: 44px;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
 }
 
 .ct-brand-name {
-  font-size: 22px;
+  font-size: 44px;
   font-weight: 800;
   color: #1a1a1a;
   white-space: nowrap;
@@ -175,7 +175,7 @@
 
 .ct-sidebar {
   position: sticky;
-  top: 76px;
+  top: 112px;
   background: #fff;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
@@ -709,7 +709,12 @@
 @media (max-width: 900px) {
   .ct-header-inner {
     gap: 12px;
-    padding: 10px 16px;
+    padding: 8px 16px;
+  }
+
+  .ct-brand-logo {
+    width: 48px;
+    height: 48px;
   }
 
   .ct-brand-name {

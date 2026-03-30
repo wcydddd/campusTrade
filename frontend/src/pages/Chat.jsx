@@ -376,16 +376,6 @@ export function ChatPanel({ otherUserId, productId: urlProductId, onBack }) {
 
       {/* ── Input area ── */}
       <div className="shrink-0 border-t border-gray-100 px-4 pt-2 pb-3">
-        {/* Toolbar placeholder */}
-        <div className="flex items-center gap-3 px-1 pb-2 text-gray-400">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-gray-600 transition-colors">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-          </svg>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="cursor-pointer hover:text-gray-600 transition-colors">
-            <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
-          </svg>
-        </div>
-
         <div className="flex items-end gap-3">
           <input
             value={input}

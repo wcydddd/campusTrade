@@ -97,6 +97,11 @@ async def startup_event():
     # AI 使用配额：按用户+日期快速查询
     await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
 
+    # password_resets: forgot-password tokens (TTL auto-cleanup + single-use)
+    await db.password_resets.create_index("expires_at", expireAfterSeconds=0)
+    await db.password_resets.create_index("email", unique=True)
+    await db.password_resets.create_index("token_hash", unique=True)
+
     # login_attempts: 登录失败跟踪
     await db.login_attempts.create_index("email", unique=True)
 

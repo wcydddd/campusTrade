@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Request
 from pydantic import BaseModel, EmailStr
-from models.user import UserCreate, UserLogin, UserResponse, SellerPublicResponse, TokenResponse, ProfileUpdate, ChangePasswordRequest
+from models.user import (
+    UserCreate, UserLogin, UserResponse, SellerPublicResponse, TokenResponse,
+    ProfileUpdate, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
+)
 from utils.security import (
     hash_password,
     verify_password,
@@ -10,7 +13,7 @@ from utils.security import (
 )
 from utils.database import get_database
 from utils.otp import generate_numeric_code, hash_code
-from utils.email import send_verification_code
+from utils.email import send_verification_code, send_password_reset_email
 from utils.rate_limiter import (
     check_rate_limit,
     check_login_lockout,
@@ -19,8 +22,10 @@ from utils.rate_limiter import (
     LOGIN_MAX_FAILURES,
 )
 from utils.security_logger import log_security_event
+from config import settings
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
+import secrets, hashlib
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -456,3 +461,125 @@ async def get_public_user(user_id: str):
         is_verified=bool(user.get("is_verified", False)),
         created_at=user["created_at"],
     )
+
+
+# =====================================================
+# POST /auth/forgot-password — Request a password reset
+# =====================================================
+RESET_TOKEN_BYTES = 32          # 256-bit random token
+RESET_RESEND_COOLDOWN = 60      # seconds before allowing another email
+
+def _hash_reset_token(token: str) -> str:
+    """SHA-256 hash so the raw token is never stored in the database."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest, request: Request):
+    """
+    1. Validate email exists & is verified.
+    2. Generate a cryptographically-secure reset token.
+    3. Store its SHA-256 hash in `password_resets` (single-use, with TTL).
+    4. Send the reset link via email.
+    5. Always return the same 200 response to prevent email enumeration.
+    """
+    await check_rate_limit(request, scope="forgot_pw", max_hits=5, window_seconds=300)
+
+    db = get_database()
+    email = payload.email.lower()
+
+    # Uniform response — returned regardless of whether the email exists
+    ok_response = {"message": "If that email is registered, a reset link has been sent."}
+
+    user = await db.users.find_one({"email": email})
+    if not user or not user.get("is_verified"):
+        return ok_response
+
+    now = datetime.now(timezone.utc)
+
+    # Cooldown: prevent spamming reset emails
+    recent = await db.password_resets.find_one({"email": email})
+    if recent and recent.get("created_at"):
+        created = recent["created_at"]
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if (now - created).total_seconds() < RESET_RESEND_COOLDOWN:
+            return ok_response
+
+    # Generate a URL-safe token and persist only its hash
+    raw_token = secrets.token_urlsafe(RESET_TOKEN_BYTES)
+    token_hash = _hash_reset_token(raw_token)
+    expires_at = now + timedelta(minutes=settings.password_reset_expire_minutes)
+
+    await db.password_resets.update_one(
+        {"email": email},
+        {"$set": {
+            "email": email,
+            "token_hash": token_hash,
+            "expires_at": expires_at,
+            "used": False,
+            "created_at": now,
+        }},
+        upsert=True,
+    )
+
+    # Build the reset URL pointing to the frontend page
+    reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}&email={email}"
+
+    try:
+        await send_password_reset_email(email=email, reset_link=reset_link)
+    except Exception as e:
+        print(f"[email] Password reset send failed: {e}")
+        # Still return the uniform response to avoid leaking info
+
+    await log_security_event("password_reset_requested", email=email, request=request)
+    return ok_response
+
+
+# =====================================================
+# POST /auth/reset-password — Execute the password reset
+# =====================================================
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest, request: Request):
+    """
+    1. Look up the token hash in `password_resets`.
+    2. Verify it's not expired and not already used.
+    3. Hash the new password with bcrypt and update the user record.
+    4. Mark the token as used (single-use guarantee).
+    """
+    await check_rate_limit(request, scope="reset_pw", max_hits=10, window_seconds=300)
+
+    db = get_database()
+    token_hash = _hash_reset_token(payload.token)
+
+    record = await db.password_resets.find_one({"token_hash": token_hash})
+    if not record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link.")
+
+    # Check expiration
+    now = datetime.now(timezone.utc)
+    expires_at = record.get("expires_at")
+    if expires_at:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < now:
+            raise HTTPException(status_code=400, detail="Reset link has expired. Please request a new one.")
+
+    # Check single-use
+    if record.get("used"):
+        raise HTTPException(status_code=400, detail="This reset link has already been used.")
+
+    email = record["email"]
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link.")
+
+    # Update the password
+    new_hashed = hash_password(payload.new_password)
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"hashed_password": new_hashed}})
+
+    # Invalidate the token
+    await db.password_resets.update_one({"_id": record["_id"]}, {"$set": {"used": True}})
+
+    await log_security_event("password_reset_success", email=email, user_id=str(user["_id"]), request=request)
+    return {"message": "Password has been reset successfully. You can now log in."}

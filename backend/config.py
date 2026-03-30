@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     
+    # Frontend URL (used in password-reset emails)
+    frontend_url: str = "http://localhost:5173"
+
+    # Password reset
+    password_reset_expire_minutes: int = 30
+
     # App Settings
     allowed_email_domains: str = "@liverpool.ac.uk,@university.edu,@student.ac.uk"
     upload_dir: str = "./uploads"
