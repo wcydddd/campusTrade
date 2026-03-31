@@ -2,17 +2,63 @@ import React, { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { API_BASE, getStoredToken, saveAuthSession } from "../api";
 import campusTradeLogo from "../assets/uol-secondhand-logo.png";
+import "./Login.css";
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="login-input-icon">
+      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="login-input-icon">
+      <path
+        fillRule="evenodd"
+        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+function EyeIcon({ open }) {
+  if (open) {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+        <path
+          fillRule="evenodd"
+          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+          clipRule="evenodd"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+      <path
+        fillRule="evenodd"
+        d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
+        clipRule="evenodd"
+      />
+      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+    </svg>
+  );
+}
 
 export default function Login() {
   const token = getStoredToken();
   if (token) return <Navigate to="/home" replace />;
 
-  // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // UI state
   const [touched, setTouched] = useState({ email: false, password: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +67,6 @@ export default function Login() {
   const location = useLocation();
   const from = location.state?.from?.pathname || "/home";
 
-  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.(ac\.uk|edu)$/i;
 
   const emailError = !email
@@ -74,123 +119,125 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="flex justify-center mb-2">
+    <div className="login-page">
+      <div className="login-wrapper">
+        {/* Header: Logo + Titles */}
+        <div className="login-header">
           <img
             src={campusTradeLogo}
             alt="CampusTrade logo"
-            className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10"
+            className="login-logo-img"
           />
+          <span className="login-brand-tag">UOL Campus</span>
+          <h1 className="login-title">CampusTrade</h1>
+          <p className="login-subtitle">Every treasure here has a story.</p>
         </div>
-        <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">CampusTrade</h2>
-        <p className="mt-2 text-sm text-gray-600">Sign in to access your campus marketplace</p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-sm sm:rounded-xl sm:px-10 border border-gray-100">
-          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+        {/* Card */}
+        <div className="login-card">
+          <form className="login-form" onSubmit={handleSubmit} noValidate>
             {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                University Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => handleBlur("email")}
-                className={`w-full mt-1 px-3 py-2 border rounded-lg shadow-sm focus:ring-2 transition
-                  ${touched.email && emailError
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-indigo-500"}
-                `}
-                placeholder="student@university.ac.uk"
-              />
+            <div className="login-field">
+              <label className="login-label">University Email</label>
+              <div className={`login-input-wrap ${touched.email && emailError ? "login-input-wrap--error" : ""}`}>
+                <MailIcon />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => handleBlur("email")}
+                  className="login-input"
+                  placeholder="Enter your university email (UOL)"
+                />
+              </div>
               {touched.email && emailError && (
-                <p className="mt-2 text-sm text-red-600">{emailError}</p>
+                <p className="login-field-error">{emailError}</p>
               )}
             </div>
 
             {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => handleBlur("password")}
-                className={`w-full mt-1 px-3 py-2 border rounded-lg shadow-sm focus:ring-2 transition
-                  ${touched.password && passwordError
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-indigo-500"}
-                `}
-                placeholder="••••••••"
-              />
+            <div className="login-field">
+              <label className="login-label">Password</label>
+              <div className={`login-input-wrap ${touched.password && passwordError ? "login-input-wrap--error" : ""}`}>
+                <LockIcon />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => handleBlur("password")}
+                  className="login-input"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  className="login-eye-btn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
               {touched.password && passwordError && (
-                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+                <p className="login-field-error">{passwordError}</p>
               )}
             </div>
 
             {/* Remember + Forgot */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center">
+            <div className="login-meta-row">
+              <label className="login-remember">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="mr-2"
+                  className="login-checkbox"
                 />
-                Remember me
+                <span>Remember me</span>
               </label>
-
-              <div className="text-sm">
-                <Link
-                  to="/forgot-password"
-                  className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
+              <Link to="/forgot-password" className="login-forgot-link">
+                Forgot your password?
+              </Link>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="text-sm">
-                <p className="text-red-600" role="alert">
-                  {error}
-                </p>
+              <div className="login-error-box">
+                <p>{error}</p>
                 {(error.includes("Email not verified") || error.includes("verify your email")) && (
                   <Link
                     to={"/verify-email" + (email.trim() ? "?email=" + encodeURIComponent(email.trim()) : "")}
-                    className="inline-block mt-2 font-medium text-indigo-600 hover:text-indigo-500"
+                    className="login-verify-link"
                   >
                     Go to verify email →
                   </Link>
                 )}
               </div>
             )}
+
             {/* Submit */}
             <button
               type="submit"
               disabled={!isFormValid || isSubmitting}
-              className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60"
+              className="login-submit-btn"
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? (
+                <span className="login-btn-loading">
+                  <span className="login-spinner" />
+                  Signing in...
+                </span>
+              ) : (
+                "🛒 Sign in"
+              )}
             </button>
           </form>
 
-          {/* Register link */}
-          <div className="mt-6 text-center text-sm">
-            <span className="text-gray-600">Don't have an account? </span>
-            <Link
-              to="/register"
-              className="text-indigo-600 hover:text-indigo-500 font-medium"
-            >
+          {/* Register */}
+          <p className="login-register-row">
+            Don't have an account?
+            <Link to="/register" className="login-register-link">
               Register here
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>

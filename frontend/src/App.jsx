@@ -36,6 +36,12 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* Global Xianyu-style background */}
+      <div className="app-bg-bubbles" aria-hidden="true">
+        <div className="app-bubble app-bubble--1" />
+        <div className="app-bubble app-bubble--2" />
+        <div className="app-bubble app-bubble--3" />
+      </div>
       <Routes>
         {/* Default to product listing; supports guest browsing */}
         <Route path="/" element={<Navigate to="/home" replace />} />

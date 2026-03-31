@@ -1,0 +1,309 @@
+/* OrderDetail.css — Xianyu-style mobile-first card layout */
+
+.od-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+/* ---------- Header ---------- */
+
+.od-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
+  padding: 0 40px;
+}
+
+.od-back {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 8px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+  font-family: inherit;
+  box-shadow: none;
+  min-height: 0;
+  line-height: 1;
+}
+
+.od-back:hover {
+  color: #333;
+  background: none;
+  border-color: transparent;
+  transform: none;
+}
+
+.od-back-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.od-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #333;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Shared card ---------- */
+
+.od-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  margin-bottom: 16px;
+  padding: 20px 22px;
+}
+
+.od-card-title {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+}
+
+/* ---------- Card 1: Product Snapshot ---------- */
+
+.od-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.od-hero-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #F7F8FA;
+  flex-shrink: 0;
+}
+
+.od-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.od-hero-name {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.od-hero-price {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  color: #E05A33;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.od-hero-price-sym {
+  font-size: 16px;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+/* ---------- Key-value rows ---------- */
+
+.od-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.od-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.od-row:last-child {
+  border-bottom: none;
+}
+
+.od-row-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.od-row-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-align: right;
+  word-break: break-all;
+  min-width: 0;
+  margin-left: 16px;
+}
+
+.od-row-value--bold {
+  font-weight: 800;
+  font-size: 16px;
+  color: #E05A33;
+}
+
+/* ---------- Status badge ---------- */
+
+.od-status-badge {
+  display: inline-block;
+  padding: 3px 14px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.od-status--pending {
+  background: #FFF8DC;
+  color: #b8860b;
+}
+
+.od-status--confirmed {
+  background: #E0F0FF;
+  color: #2563eb;
+}
+
+.od-status--completed {
+  background: #E6F9EE;
+  color: #16a34a;
+}
+
+.od-status--cancelled {
+  background: #F3F4F6;
+  color: #9ca3af;
+}
+
+/* ---------- Description (stacked layout) ---------- */
+
+.od-desc-row {
+  padding: 13px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.od-desc-row:last-child {
+  border-bottom: none;
+}
+
+.od-desc-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+  margin-bottom: 6px;
+}
+
+.od-desc-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* ---------- Avatar in seller/buyer card ---------- */
+
+.od-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.od-avatar-row:last-child {
+  border-bottom: none;
+}
+
+.od-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #F7F8FA;
+  flex-shrink: 0;
+}
+
+/* ---------- Review status indicators ---------- */
+
+.od-review-yes {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.od-review-no {
+  color: #999;
+}
+
+/* ---------- Loading / Error states ---------- */
+
+.od-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+.od-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #ff4d4f;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 600px) {
+  .od-page {
+    padding: 14px 12px 40px;
+  }
+
+  .od-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .od-hero {
+    gap: 14px;
+  }
+
+  .od-hero-img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .od-hero-price {
+    font-size: 22px;
+  }
+
+  .od-header {
+    padding: 0 32px;
+  }
+
+  .od-title {
+    font-size: 20px;
+  }
+}

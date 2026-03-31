@@ -1,157 +1,422 @@
-.admin-users {
+/* ============================================================
+   AdminUsers.css — Xianyu-style User Management dashboard
+   ============================================================ */
+
+.au-page {
   min-height: 100vh;
-  padding: 24px;
-  background: #f4f6f8;
+  padding: 28px 24px;
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
 }
 
-.admin-users-header {
+/* ---------- Header ---------- */
+.au-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.admin-users-header h1 {
+.au-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 28px;
+  font-weight: 800;
   color: #1a1a1a;
+  letter-spacing: -0.02em;
 }
 
-.admin-users-back {
-  color: #4f46e5;
-  text-decoration: none;
+.au-nav {
+  display: flex;
+  gap: 18px;
+}
+
+.au-nav-link {
   font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.15s;
 }
 
-.admin-users-toolbar {
+.au-nav-link:hover {
+  color: #FFD600;
+}
+
+/* ---------- Search bar ---------- */
+.au-search {
   display: flex;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  max-width: 480px;
 }
 
-.admin-users-toolbar input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  width: 220px;
-  font-size: 14px;
-}
-
-.admin-users-toolbar button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #4f46e5;
-  background: #4f46e5;
-  color: #fff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.admin-users-error {
-  color: #c00;
-  margin-bottom: 10px;
-}
-
-.admin-users-meta {
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #666;
-}
-
-.admin-users-table-wrap {
-  overflow-x: auto;
+.au-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1.5px solid #e8e8e8;
+  border-radius: 50px;
+  padding: 0 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.au-search-wrap:focus-within {
+  border-color: #FFD600;
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.15);
+}
+
+.au-search-icon {
+  width: 16px;
+  height: 16px;
+  color: #bbb;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.au-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #333;
+  font-family: inherit;
+}
+
+.au-search-input::placeholder {
+  color: #ccc;
+}
+
+.au-search-btn {
+  padding: 10px 22px;
+  border-radius: 50px;
+  border: none;
+  background: #FFD600;
+  color: #333;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.au-search-btn:hover {
+  background: #f5c800;
+  box-shadow: 0 2px 8px rgba(255, 214, 0, 0.3);
+}
+
+.au-search-btn:active {
+  background: #e6b800;
+}
+
+/* ---------- Messages ---------- */
+.au-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #ff4d4f;
   margin-bottom: 16px;
 }
 
-.admin-users-table {
+.au-loading {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.au-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* ---------- Table card ---------- */
+.au-table-card {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 20px;
+  max-width: 1100px;
+}
+
+.au-table-meta {
+  padding: 16px 24px 0;
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+.au-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.admin-users-table th,
-.admin-users-table td {
-  padding: 12px 14px;
+/* Table header */
+.au-table thead th {
+  padding: 14px 20px;
   text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.admin-users-table th {
-  background: #f8fafc;
-  font-weight: 600;
-  color: #334155;
-}
-
-.admin-users-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.admin-users-actions button {
-  padding: 4px 10px;
-  border-radius: 6px;
   font-size: 12px;
-  cursor: pointer;
-  border: none;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #F0F0F0;
+  background: transparent;
 }
 
-.admin-users-actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+/* Table rows */
+.au-table tbody tr {
+  border-bottom: 1px solid #F0F0F0;
+  transition: background 0.12s;
 }
 
-.btn-verify {
-  background: #f0fdf4;
-  color: #15803d;
+.au-table tbody tr:last-child {
+  border-bottom: none;
 }
 
-.btn-unverify {
+.au-table tbody tr:hover {
+  background: #FAFAFA;
+}
+
+.au-table tbody td {
+  padding: 16px 20px;
+  vertical-align: middle;
+  color: #444;
+}
+
+.au-row-banned {
+  opacity: 0.55;
+}
+
+/* ---------- Tags ---------- */
+.au-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.au-tag--admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.au-tag--moderator {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.au-tag--user {
   background: #f1f5f9;
   color: #64748b;
 }
 
-.btn-ban {
-  background: #fef2f2;
-  color: #b91c1c;
+/* ---------- Status indicators ---------- */
+.au-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
 }
 
-.btn-unban {
+.au-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.au-status-dot--green {
+  background: #22c55e;
+}
+
+.au-status-dot--gray {
+  background: #d1d5db;
+}
+
+.au-status-dot--red {
+  background: #ef4444;
+}
+
+.au-status-text--green {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.au-status-text--gray {
+  color: #9ca3af;
+}
+
+.au-status-text--red {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* ---------- Actions ---------- */
+.au-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.au-btn-verify {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #22c55e;
   background: #f0fdf4;
   color: #15803d;
-}
-
-.admin-users-actions select {
-  padding: 4px 8px;
   font-size: 12px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-}
-
-.admin-users-pagination {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-users-pagination button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
+  transition: all 0.15s;
 }
 
-.admin-users-pagination button:disabled {
+.au-btn-verify:hover {
+  background: #dcfce7;
+}
+
+.au-btn-unverify {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #555;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-unverify:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.au-btn-ban {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-ban:hover {
+  background: #fee2e2;
+}
+
+.au-btn-unban {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #22c55e;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-unban:hover {
+  background: #dcfce7;
+}
+
+.au-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.admin-users-msg {
-  color: #666;
-  margin: 10px 0;
+.au-role-select {
+  padding: 5px 28px 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: #F7F8FA;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.au-role-select:focus {
+  border-color: #FFD600;
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.15);
+}
+
+/* ---------- Pagination ---------- */
+.au-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.au-pagination span {
+  font-size: 14px;
+  color: #555;
+  font-weight: 700;
+}
+
+.au-pagination button {
+  padding: 8px 20px;
+  border-radius: 50px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-pagination button:hover:not(:disabled) {
+  border-color: #FFD600;
+  background: #FFD600;
+  color: #333;
+}
+
+.au-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .au-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .au-table-card {
+    border-radius: 16px;
+  }
+
+  .au-table thead th,
+  .au-table tbody td {
+    padding: 12px 14px;
+  }
+
+  .au-search {
+    max-width: 100%;
+  }
 }

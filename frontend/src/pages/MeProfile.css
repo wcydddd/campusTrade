@@ -106,21 +106,25 @@
 .me-profile-avatar-form > button[type="submit"] {
   padding: 9px 20px;
   border-radius: 999px;
-  border: none;
-  background: #fbbf24;
+  border: 2px solid #fff;
+  background: #fff0a0;
   color: #1a1a1a;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(251, 191, 36, 0.25);
+  box-shadow: 0 1px 3px rgba(255, 214, 0, 0.2);
   align-self: flex-start;
 }
 
 .me-profile-avatar-form > button[type="submit"]:hover {
-  background: #f59e0b;
-  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.35);
+  background: #ffe566;
+  box-shadow: 0 2px 8px rgba(255, 214, 0, 0.35);
   transform: translateY(-1px);
+}
+
+.me-profile-avatar-form > button[type="submit"]:active {
+  background: #FFD600;
 }
 
 .me-profile-avatar-form > button[type="submit"]:disabled {
@@ -136,22 +140,26 @@
   width: 100%;
   padding: 11px 24px;
   border-radius: 10px;
-  border: none;
-  background: #fbbf24;
+  border: 2px solid #fff;
+  background: #fff0a0;
   color: #1a1a1a;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s ease;
-  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 214, 0, 0.2);
   margin-top: 4px;
   letter-spacing: 0.01em;
 }
 
 .me-profile-section form > button[type="submit"]:hover {
-  background: #f59e0b;
-  box-shadow: 0 4px 14px rgba(251, 191, 36, 0.4);
+  background: #ffe566;
+  box-shadow: 0 4px 14px rgba(255, 214, 0, 0.35);
   transform: translateY(-1px);
+}
+
+.me-profile-section form > button[type="submit"]:active {
+  background: #FFD600;
 }
 
 .me-profile-section form > button[type="submit"]:disabled {

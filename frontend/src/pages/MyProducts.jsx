@@ -208,7 +208,7 @@ function MyProducts() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4">
         <UserCenterSidebar />
 

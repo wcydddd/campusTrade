@@ -61,7 +61,7 @@ export default function RecentViewed() {
   }, [items]);
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4]">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4 pb-10">
         <UserCenterSidebar />
 

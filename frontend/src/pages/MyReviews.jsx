@@ -37,7 +37,7 @@ export default function MyReviews() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4]">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4 pb-10">
         <UserCenterSidebar />
 
@@ -87,21 +87,12 @@ export default function MyReviews() {
 
           {/* Tabs */}
           <div className="px-6 flex items-end gap-6 border-b border-gray-100">
-            {["All", "With Pictures", "Good Reviews", "From Buyers", "From Sellers"].map(
-              (tab, i) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={
-                    i === 0
-                      ? "relative pb-3 text-sm font-bold text-gray-900 bg-transparent border-none cursor-pointer px-0 after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:w-8 after:h-[3px] after:rounded-full after:bg-amber-400"
-                      : "pb-3 text-sm text-gray-500 bg-transparent border-none cursor-pointer px-0 hover:text-gray-700 transition-colors"
-                  }
-                >
-                  {tab}
-                </button>
-              )
-            )}
+            <button
+              type="button"
+              className="relative pb-3 text-sm font-bold text-gray-900 bg-transparent border-none cursor-pointer px-0 after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:w-8 after:h-[3px] after:rounded-full after:bg-amber-400"
+            >
+              All
+            </button>
           </div>
 
           {/* Content */}

@@ -405,7 +405,7 @@ export default function Chat() {
   const urlProductId = searchParams.get("product");
 
   return (
-    <div className="h-screen bg-gray-50">
+    <div className="h-screen">
       <ChatPanel
         otherUserId={otherUserId}
         productId={urlProductId}

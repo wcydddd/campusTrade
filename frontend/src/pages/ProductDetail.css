@@ -3,7 +3,6 @@
 /* Page wrapper */
 .pd-page {
   min-height: 100vh;
-  background: #f4f4f4;
 }
 
 /* Card header (inside product card — Back, Seller, Share, Copy) */
@@ -291,8 +290,8 @@
   gap: 8px;
   padding: 14px 20px;
   border-radius: 14px;
-  border: none;
-  background: #fbbf24;
+  border: 2px solid #fff;
+  background: #fff0a0;
   color: #1a1a1a;
   font-size: 15px;
   font-weight: 700;
@@ -300,10 +299,11 @@
   transition: all 0.2s;
 }
 .pd-action-chat:hover {
-  background: #f59e0b;
-  border-color: transparent;
+  background: #ffe566;
+  border-color: #fff;
 }
 .pd-action-chat:active {
+  background: #FFD600;
   transform: scale(0.98);
 }
 

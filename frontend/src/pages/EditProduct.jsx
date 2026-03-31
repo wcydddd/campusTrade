@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_BASE, authFetch, getStoredToken } from "../api";
-import "./PublishProduct.css";
+import "./EditProduct.css";
 
 const ENUM_TO_CATEGORY = {
   "教材": "Textbooks",
@@ -177,106 +177,157 @@ export default function EditProduct() {
   }
 
   if (loadProduct) {
-    return <div className="publish-product"><p className="publish-product-hint">Loading...</p></div>;
+    return (
+      <div className="edit-product">
+        <div className="edit-card">
+          <p style={{ textAlign: "center", color: "#888" }}>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="publish-product">
-      <div className="publish-product-card">
-        <h2>Edit product</h2>
-        <p className="publish-product-hint">Update the details below.</p>
+    <div className="edit-product">
+      <div className="edit-card">
+        <div className="edit-header">
+          <h2>Edit product</h2>
+          <p>Update the details below.</p>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <label>Title *</label>
-          <input
-            type="text"
-            placeholder="Product title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={200}
-          />
+        <form className="edit-form" onSubmit={handleSubmit}>
+          {/* Title */}
+          <div className="edit-field">
+            <label className="edit-label">Title *</label>
+            <input
+              type="text"
+              className="edit-input"
+              placeholder="Product title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+            />
+          </div>
 
-          <label>Description *</label>
-          <textarea
-            placeholder="Product description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-          />
+          {/* Description */}
+          <div className="edit-field">
+            <label className="edit-label">Description *</label>
+            <textarea
+              className="edit-textarea"
+              placeholder="Product description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
+            />
+          </div>
 
-          <label>Price (£) *</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={price}
-            onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-          />
+          {/* Price */}
+          <div className="edit-field">
+            <label className="edit-label">Price (£) *</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="edit-input edit-input--price"
+              placeholder="0.00"
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+            />
+          </div>
 
-          <label>Category *</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {categories.length === 0 && <option value="">Loading...</option>}
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          {/* Category */}
+          <div className="edit-field">
+            <label className="edit-label">Category *</label>
+            <select className="edit-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.length === 0 && <option value="">Loading...</option>}
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
 
-          <label>Condition</label>
-          <select value={condition} onChange={(e) => setCondition(e.target.value)}>
-            {CONDITION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          {/* Condition */}
+          <div className="edit-field">
+            <label className="edit-label">Condition</label>
+            <select className="edit-select" value={condition} onChange={(e) => setCondition(e.target.value)}>
+              {CONDITION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
 
-          <label className="checkbox-label">
+          {/* Sustainable checkbox */}
+          <label className="edit-checkbox-wrap">
             <input
               type="checkbox"
               checked={sustainable}
               onChange={(e) => setSustainable(e.target.checked)}
             />
+            <span className="edit-checkbox-icon">
+              <svg viewBox="0 0 12 10">
+                <polyline points="1.5 5 4.5 8 10.5 2" />
+              </svg>
+            </span>
             Sustainable / Recyclable
           </label>
 
-          <label>Images (ordered)</label>
-          <input
-            type="file"
-            multiple
-            accept=".jpg,.jpeg,.png,.webp"
-            onChange={(e) => {
-              const files = e.target.files;
-              if (files?.length) handleAddImages(files);
-              e.target.value = "";
-            }}
-          />
-          {uploadingImages && <p className="publish-product-hint">Uploading images...</p>}
+          {/* Images */}
+          <div className="edit-field">
+            <label className="edit-label">Images (ordered)</label>
+            <input
+              type="file"
+              className="edit-file-input"
+              multiple
+              accept=".jpg,.jpeg,.png,.webp"
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files?.length) handleAddImages(files);
+                e.target.value = "";
+              }}
+            />
+            {uploadingImages && <p className="edit-upload-hint">Uploading images...</p>}
 
-          {images.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10 }}>
-              {images.map((u, idx) => (
-                <div key={`${u}-${idx}`} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 6 }}>
-                  <img
-                    src={resolveMediaUrl(u)}
-                    alt={`img-${idx}`}
-                    style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 6 }}
-                  />
-                  <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
-                    <button type="button" onClick={() => moveImage(idx, idx - 1)} disabled={idx === 0}>↑</button>
-                    <button type="button" onClick={() => moveImage(idx, idx + 1)} disabled={idx === images.length - 1}>↓</button>
-                    <button type="button" onClick={() => removeImage(idx)}>Remove</button>
+            {images.length > 0 && (
+              <div className="edit-images-grid">
+                {images.map((u, idx) => (
+                  <div key={`${u}-${idx}`} className="edit-img-card">
+                    <img src={resolveMediaUrl(u)} alt={`img-${idx}`} />
+                    <div className="edit-img-actions">
+                      <button
+                        type="button"
+                        className="edit-img-btn"
+                        onClick={() => moveImage(idx, idx - 1)}
+                        disabled={idx === 0}
+                        title="Move up"
+                      >↑</button>
+                      <button
+                        type="button"
+                        className="edit-img-btn"
+                        onClick={() => moveImage(idx, idx + 1)}
+                        disabled={idx === images.length - 1}
+                        title="Move down"
+                      >↓</button>
+                      <button
+                        type="button"
+                        className="edit-img-btn edit-img-btn--remove"
+                        onClick={() => removeImage(idx)}
+                        title="Remove"
+                      >✕</button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
 
-          {error && <p className="publish-product-error">{error}</p>}
-          {success && <p className="publish-product-success">{success}</p>}
+          {/* Messages */}
+          {error && <p className="edit-error">{error}</p>}
+          {success && <p className="edit-success">{success}</p>}
 
-          <div className="publish-product-actions">
-            <button type="submit" disabled={loading}>
+          {/* Actions */}
+          <div className="edit-actions">
+            <button type="submit" className="edit-save-btn" disabled={loading}>
               {loading ? "Saving..." : "Save changes"}
             </button>
-            <Link to="/my-products">Cancel</Link>
+            <Link to="/my-products" className="edit-cancel-link">Cancel</Link>
           </div>
         </form>
       </div>

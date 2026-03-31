@@ -537,7 +537,7 @@ export default function PublishProduct() {
      ═══════════════════════════════════════════ */
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4]">
+    <div className="min-h-screen">
       {/* ── Full-width yellow header ── */}
       <div className="w-full bg-[#FFDA00] px-4 py-10 text-center shadow-sm">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
@@ -964,7 +964,7 @@ export default function PublishProduct() {
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-full bg-[#FFDA00] px-10 py-3 text-sm font-extrabold text-gray-900 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:hover:translate-y-0"
+                className="rounded-full bg-[#fff0a0] border-2 border-white px-10 py-3 text-sm font-extrabold text-gray-900 shadow-md transition-all hover:bg-[#ffe566] hover:-translate-y-0.5 hover:shadow-lg active:bg-[#FFD600] active:translate-y-0 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
@@ -1139,9 +1139,9 @@ export default function PublishProduct() {
                 style={{
                   padding: "10px 14px",
                   borderRadius: 10,
-                  border: "none",
-                  background: "#4f46e5",
-                  color: "#fff",
+                  border: "2px solid #fff",
+                  background: "#fff0a0",
+                  color: "#333",
                   cursor: "pointer",
                   fontWeight: 600,
                 }}

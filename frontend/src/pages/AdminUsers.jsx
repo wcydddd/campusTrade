@@ -5,13 +5,32 @@ import "./AdminUsers.css";
 
 const PAGE_SIZE = 10;
 
+const SearchIcon = () => (
+  <svg className="au-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="2 8 6 12 14 4" />
+  </svg>
+);
+
+function roleTagClass(role) {
+  if (role === "admin") return "au-tag au-tag--admin";
+  if (role === "moderator") return "au-tag au-tag--moderator";
+  return "au-tag au-tag--user";
+}
+
 export default function AdminUsers() {
   const [data, setData] = useState({ items: [], total: 0, page: 1, size: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [actionLoading, setActionLoading] = useState(null); // id of row being acted on
+  const [actionLoading, setActionLoading] = useState(null);
   const abortRef = useRef(null);
 
   function fetchUsers(page = 1, q = search) {
@@ -111,35 +130,41 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="admin-users">
-      <div className="admin-users-header">
-        <h1>User Management</h1>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Link to="/admin/products" className="admin-users-back">Products</Link>
-          <Link to="/admin/reports" className="admin-users-back">Reports</Link>
-          <Link to="/home" className="admin-users-back">Home</Link>
+    <div className="au-page">
+      {/* Header */}
+      <div className="au-header">
+        <h1 className="au-title">User Management</h1>
+        <div className="au-nav">
+          <Link to="/admin/products" className="au-nav-link">Products</Link>
+          <Link to="/admin/reports" className="au-nav-link">Reports</Link>
+          <Link to="/home" className="au-nav-link">Home</Link>
         </div>
       </div>
 
-      <div className="admin-users-toolbar">
-        <input
-          type="text"
-          placeholder="Search by email or username"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput)}
-        />
-        <button type="button" onClick={() => setSearch(searchInput)}>Search</button>
+      {/* Search */}
+      <div className="au-search">
+        <div className="au-search-wrap">
+          <SearchIcon />
+          <input
+            className="au-search-input"
+            type="text"
+            placeholder="Search by email or username"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput)}
+          />
+        </div>
+        <button type="button" className="au-search-btn" onClick={() => setSearch(searchInput)}>Search</button>
       </div>
 
-      {error && <p className="admin-users-error">{error}</p>}
-      {loading && <p className="admin-users-msg">Loading...</p>}
+      {error && <p className="au-error">{error}</p>}
+      {loading && <p className="au-loading">Loading...</p>}
 
       {!loading && (
         <>
-          <p className="admin-users-meta">{data.total} total, page {data.page} / {totalPages}</p>
-          <div className="admin-users-table-wrap">
-            <table className="admin-users-table">
+          <div className="au-table-card">
+            <p className="au-table-meta">{data.total} total, page {data.page} / {totalPages}</p>
+            <table className="au-table">
               <thead>
                 <tr>
                   <th>Email</th>
@@ -152,43 +177,76 @@ export default function AdminUsers() {
               </thead>
               <tbody>
                 {data.items.map((u) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} className={u.banned ? "au-row-banned" : ""}>
                     <td>{u.email}</td>
                     <td>{u.username}</td>
-                    <td>{u.role}</td>
-                    <td>{u.is_verified ? "Yes" : "No"}</td>
-                    <td>{u.banned ? "Yes" : "No"}</td>
-                    <td className="admin-users-actions">
-                      {u.is_verified ? (
-                        <button type="button" className="btn-unverify" disabled={actionLoading === u.id} onClick={() => handleVerify(u.id, false)}>Unverify</button>
-                      ) : (
-                        <button type="button" className="btn-verify" disabled={actionLoading === u.id} onClick={() => handleVerify(u.id, true)}>Verify</button>
-                      )}
-                      {u.banned ? (
-                        <button type="button" className="btn-unban" disabled={actionLoading === u.id} onClick={() => handleUnban(u.id)}>Unban</button>
-                      ) : (
-                        <button type="button" className="btn-ban" disabled={actionLoading === u.id} onClick={() => handleBan(u.id)}>Ban</button>
-                      )}
-                      <select
-                        value={u.role}
-                        disabled={actionLoading === u.id}
-                        onChange={(e) => handleRole(u.id, e.target.value)}
-                      >
-                        <option value="user">user</option>
-                        <option value="moderator">moderator</option>
-                        <option value="admin">admin</option>
-                      </select>
+                    <td>
+                      <span className={roleTagClass(u.role)}>{u.role}</span>
+                    </td>
+                    <td>
+                      <span className="au-status">
+                        {u.is_verified ? (
+                          <>
+                            <span className="au-status-dot au-status-dot--green" />
+                            <span className="au-status-text--green"><CheckIcon /> Yes</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="au-status-dot au-status-dot--gray" />
+                            <span className="au-status-text--gray">No</span>
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="au-status">
+                        {u.banned ? (
+                          <>
+                            <span className="au-status-dot au-status-dot--red" />
+                            <span className="au-status-text--red">Yes</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="au-status-dot au-status-dot--gray" />
+                            <span className="au-status-text--gray">No</span>
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="au-actions">
+                        {u.is_verified ? (
+                          <button type="button" className="au-btn-unverify" disabled={actionLoading === u.id} onClick={() => handleVerify(u.id, false)}>Unverify</button>
+                        ) : (
+                          <button type="button" className="au-btn-verify" disabled={actionLoading === u.id} onClick={() => handleVerify(u.id, true)}>Verify</button>
+                        )}
+                        {u.banned ? (
+                          <button type="button" className="au-btn-unban" disabled={actionLoading === u.id} onClick={() => handleUnban(u.id)}>Unban</button>
+                        ) : (
+                          <button type="button" className="au-btn-ban" disabled={actionLoading === u.id} onClick={() => handleBan(u.id)}>Ban</button>
+                        )}
+                        <select
+                          className="au-role-select"
+                          value={u.role}
+                          disabled={actionLoading === u.id}
+                          onChange={(e) => handleRole(u.id, e.target.value)}
+                        >
+                          <option value="user">user</option>
+                          <option value="moderator">moderator</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {data.items.length === 0 && <p className="au-empty">No users found.</p>}
           </div>
-          {data.items.length === 0 && <p className="admin-users-msg">No users found.</p>}
 
-          <div className="admin-users-pagination">
+          <div className="au-pagination">
             <button type="button" disabled={data.page <= 1} onClick={() => fetchUsers(data.page - 1, search)}>Previous</button>
-            <span> {data.page} / {totalPages} </span>
+            <span>{data.page} / {totalPages}</span>
             <button type="button" disabled={data.page >= totalPages} onClick={() => fetchUsers(data.page + 1, search)}>Next</button>
           </div>
         </>

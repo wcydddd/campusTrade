@@ -1,0 +1,350 @@
+/* ============================================================
+   Login.css — Xianyu-inspired login page
+   Primary yellow: #FFD600 · Accent dark: #333 · Soft bg: #FFF9E0
+   ============================================================ */
+
+/* ---------- page layout ---------- */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 24px 16px;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+/* ---------- wrapper ---------- */
+.login-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ---------- header ---------- */
+.login-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.login-logo-img {
+  width: 100px;
+  height: auto;
+  margin: 0 auto 4px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(255, 214, 0, 0.3));
+}
+
+.login-brand-tag {
+  display: inline-block;
+  background: #FFD600;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #333;
+  margin: 4px 0 0;
+  letter-spacing: -0.5px;
+  font-family: "Nunito", "PingFang SC", system-ui, sans-serif;
+}
+
+.login-subtitle {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: #888;
+  font-weight: 500;
+}
+
+/* ---------- card ---------- */
+.login-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 36px 32px 28px;
+  box-shadow:
+    0 8px 32px rgba(255, 214, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-top: 16px;
+}
+
+/* ---------- form ---------- */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* field */
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+/* input wrapper */
+.login-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f9f9f9;
+  border: 2px solid #eee;
+  border-radius: 14px;
+  padding: 0 14px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.login-input-wrap:focus-within {
+  border-color: #FFD600;
+  box-shadow: 0 0 0 4px rgba(255, 214, 0, 0.18);
+  background: #fff;
+}
+
+.login-input-wrap--error {
+  border-color: #ff4d4f !important;
+  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.12) !important;
+}
+
+/* input icon */
+.login-input-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #bbb;
+  transition: color 0.2s;
+}
+
+.login-input-wrap:focus-within .login-input-icon {
+  color: #FFD600;
+}
+
+.login-input-wrap--error .login-input-icon {
+  color: #ff4d4f;
+}
+
+/* text input */
+.login-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+  color: #333;
+  padding: 12px 0;
+  font-family: inherit;
+}
+
+.login-input::placeholder {
+  color: #ccc;
+  font-size: 14px;
+}
+
+/* eye toggle */
+.login-eye-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #bbb;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.15s;
+}
+
+.login-eye-btn:hover {
+  color: #FFD600;
+  background: rgba(255, 214, 0, 0.1);
+}
+
+/* field error */
+.login-field-error {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin: 0;
+  padding-left: 2px;
+}
+
+/* ---------- meta row ---------- */
+.login-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #FFD600;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.login-forgot-link {
+  color: #999;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.login-forgot-link:hover {
+  color: #FFD600;
+}
+
+/* ---------- error box ---------- */
+.login-error-box {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #ff4d4f;
+}
+
+.login-error-box p {
+  margin: 0;
+}
+
+.login-verify-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-weight: 600;
+  color: #FFD600;
+  text-decoration: none;
+}
+
+.login-verify-link:hover {
+  color: #e6c200;
+}
+
+/* ---------- success box ---------- */
+.login-success-box {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #52c41a;
+}
+
+.login-success-box p {
+  margin: 0;
+}
+
+/* ---------- submit button ---------- */
+.login-submit-btn {
+  width: 100%;
+  padding: 14px 0;
+  background: #fff0a0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 214, 0, 0.2);
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(255, 214, 0, 0.35);
+  background: #ffe566;
+  border-color: #fff;
+}
+
+.login-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 214, 0, 0.25);
+  background: #FFD600;
+  border-color: #fff;
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* loading state inside button */
+.login-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(51, 51, 51, 0.2);
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- register row ---------- */
+.login-register-row {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #999;
+}
+
+.login-register-link {
+  color: #FFD600;
+  font-weight: 700;
+  text-decoration: none;
+  margin-left: 4px;
+  transition: color 0.2s;
+}
+
+.login-register-link:hover {
+  color: #e6c200;
+  text-decoration: underline;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px 22px;
+    border-radius: 20px;
+  }
+
+  .login-fish-logo {
+    width: 72px;
+    height: 72px;
+  }
+
+  .login-title {
+    font-size: 1.6rem;
+  }
+}

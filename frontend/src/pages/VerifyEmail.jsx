@@ -91,7 +91,7 @@ export default function VerifyEmail() {
 
   if (verified) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 font-sans text-gray-900">
+      <div className="min-h-screen flex items-center justify-center px-4 font-sans text-gray-900">
         <div className="w-full max-w-md bg-white border border-gray-100 rounded-xl shadow-sm p-6">
           <h2 className="text-xl font-semibold">Email Verified</h2>
           <p className="mt-3 text-sm text-green-600">{message.text}</p>
@@ -109,7 +109,7 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 font-sans text-gray-900">
+    <div className="min-h-screen flex items-center justify-center px-4 font-sans text-gray-900">
       <div className="w-full max-w-md bg-white border border-gray-100 rounded-xl shadow-sm p-6">
         <h2 className="text-xl font-semibold">Verify your email</h2>
         <p className="mt-2 text-sm text-gray-600">
@@ -136,7 +136,7 @@ export default function VerifyEmail() {
               type="button"
               onClick={handleSendCode}
               disabled={sendLoading || countdown > 0}
-              className="flex-1 py-2 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 border-2 border-white rounded-lg text-sm font-medium text-gray-900 bg-[#fff0a0] hover:bg-[#ffe566] active:bg-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {countdown > 0 ? `Resend in ${countdown}s` : sendLoading ? "Sending..." : "Send verification code"}
             </button>
@@ -162,7 +162,7 @@ export default function VerifyEmail() {
             type="submit"
             onClick={handleVerify}
             disabled={verifyLoading || code.trim().length !== 6}
-            className="w-full py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 px-4 border-2 border-white rounded-lg text-sm font-medium text-gray-900 bg-[#fff0a0] hover:bg-[#ffe566] active:bg-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {verifyLoading ? "Verifying..." : "Verify email"}
           </button>

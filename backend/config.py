@@ -13,8 +13,9 @@ load_dotenv(ENV_FILE)
 print(f"[config] .env path: {ENV_FILE}, exists: {ENV_FILE.exists()}")
 
 class Settings(BaseSettings):
-    # MongoDB
+    # MongoDB (supports both local and Atlas mongodb+srv:// URIs)
     mongodb_uri: str = "mongodb://localhost:27017/campustrade"
+    mongodb_db_name: str = "campustrade"
     
     # JWT
     jwt_secret: str = "super-secret-key-123456"

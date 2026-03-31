@@ -2,7 +2,6 @@
 
 .sp-page {
   min-height: 100vh;
-  background: #f0f0f0;
 }
 
 /* ── Loading / Error ── */
@@ -40,16 +39,21 @@
   display: inline-block;
   padding: 8px 20px;
   border-radius: 8px;
-  background: #fbbf24;
+  background: #fff0a0;
   color: #1a1a1a;
   font-weight: 600;
   text-decoration: none;
   font-size: 14px;
+  border: 2px solid #fff;
   transition: background 0.15s;
 }
 
 .sp-back-home-btn:hover {
-  background: #f59e0b;
+  background: #ffe566;
+}
+
+.sp-back-home-btn:active {
+  background: #FFD600;
 }
 
 /* ══════════════════════════════════════

@@ -144,7 +144,7 @@ export default function Conversations() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       {/* ── Yellow Header (single-row slim bar) ── */}
       <header className="bg-yellow-400 w-full shadow-md sticky top-0 z-50">
         <div className="max-w-[1200px] mx-auto px-6 py-2.5 flex items-center gap-5">

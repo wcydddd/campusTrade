@@ -56,7 +56,7 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
+      <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <h2 className="text-2xl font-extrabold text-gray-900">Invalid Reset Link</h2>
           <p className="mt-3 text-sm text-gray-600">This password reset link is invalid or has expired.</p>
@@ -70,7 +70,7 @@ export default function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
+      <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="flex justify-center mb-2">
             <img src={campusTradeLogo} alt="CampusTrade logo" className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10" />
@@ -87,7 +87,7 @@ export default function ResetPassword() {
             <p className="text-sm text-gray-600">Your password has been reset successfully.</p>
             <button
               onClick={() => navigate("/login")}
-              className="mt-6 w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              className="mt-6 w-full py-2.5 bg-[#fff0a0] text-gray-900 border-2 border-white rounded-lg hover:bg-[#ffe566] active:bg-[#FFD600] transition"
             >
               Go to Sign in
             </button>
@@ -98,7 +98,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
+    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center mb-2">
           <img src={campusTradeLogo} alt="CampusTrade logo" className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10" />
@@ -145,7 +145,7 @@ export default function ResetPassword() {
             <button
               type="submit"
               disabled={!isFormValid || isSubmitting}
-              className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60"
+              className="w-full py-2.5 bg-[#fff0a0] text-gray-900 border-2 border-white rounded-lg hover:bg-[#ffe566] active:bg-[#FFD600] transition disabled:opacity-60"
             >
               {isSubmitting ? "Resetting..." : "Reset Password"}
             </button>

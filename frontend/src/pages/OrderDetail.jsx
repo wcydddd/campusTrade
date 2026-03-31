@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
-import "./MyOrders.css";
+import "./OrderDetail.css";
 
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -10,8 +10,9 @@ function resolveMediaUrl(url) {
   return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
 }
 
-function labelStatus(s) {
-  return s ? String(s) : "—";
+function statusClass(s) {
+  const map = { pending: "od-status--pending", confirmed: "od-status--confirmed", completed: "od-status--completed", cancelled: "od-status--cancelled" };
+  return map[s] || "od-status--pending";
 }
 
 export default function OrderDetail() {
@@ -44,9 +45,7 @@ export default function OrderDetail() {
       }
     }
     if (orderId) load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [orderId]);
 
   const isBuyer = useMemo(() => {
@@ -54,120 +53,175 @@ export default function OrderDetail() {
     return String(user.id) === String(data.buyer.id);
   }, [user?.id, data?.buyer?.id]);
 
-  const me = isBuyer ? data?.buyer : data?.seller;
   const other = isBuyer ? data?.seller : data?.buyer;
-
   const product = data?.product || {};
   const images = Array.isArray(product.images) ? product.images : [];
   const hero = resolveMediaUrl(images[0]) || "https://placehold.co/600x400";
 
   if (loading) {
     return (
-      <div className="my-orders">
-        <div className="my-orders-top">
-          <h1>Order Detail</h1>
-          <Link to="/my-orders" className="my-orders-back">Back to My Orders</Link>
+      <div className="od-page">
+        <div className="od-header">
+          <button type="button" className="od-back" onClick={() => navigate("/my-orders")}>
+            <span className="od-back-arrow">‹</span> Back
+          </button>
+          <h1 className="od-title">Order Detail</h1>
         </div>
-        <p className="my-orders-msg">Loading...</p>
+        <p className="od-loading">Loading...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="my-orders">
-        <div className="my-orders-top">
-          <h1>Order Detail</h1>
-          <Link to="/my-orders" className="my-orders-back">Back to My Orders</Link>
+      <div className="od-page">
+        <div className="od-header">
+          <button type="button" className="od-back" onClick={() => navigate("/my-orders")}>
+            <span className="od-back-arrow">‹</span> Back
+          </button>
+          <h1 className="od-title">Order Detail</h1>
         </div>
-        <p className="my-orders-error">{error || "Order not found"}</p>
+        <p className="od-error">{error || "Order not found"}</p>
       </div>
     );
   }
 
   return (
-    <div className="my-orders">
-      <div className="my-orders-top">
-        <h1>Order Detail</h1>
-        <button
-          type="button"
-          className="logout-btn"
-          onClick={() => navigate("/my-orders")}
-          style={{ width: "auto" }}
-        >
-          Back to My Orders
+    <div className="od-page">
+      {/* Header */}
+      <div className="od-header">
+        <button type="button" className="od-back" onClick={() => navigate("/my-orders")}>
+          <span className="od-back-arrow">‹</span> Back
         </button>
+        <h1 className="od-title">Order Detail</h1>
       </div>
 
-      <div className="order-card" style={{ cursor: "default" }}>
-        <img
-          src={hero}
-          alt=""
-          className="order-card-img"
-          onError={(e) => {
-            e.currentTarget.src = "https://placehold.co/600x400";
-          }}
-          style={{ width: 120, height: 120 }}
-        />
-        <div className="order-card-body">
-          <h3 style={{ marginBottom: 6 }}>{product.title || "Product"}</h3>
-          <p className="order-card-price">£{data.final_price ?? product.price ?? "-"}</p>
-          <p className="order-card-meta" style={{ marginTop: 6 }}>
-            <b>Order ID:</b> {data.id}
-          </p>
-          <p className="order-card-meta">
-            <b>Status:</b> {labelStatus(data.status)}
-          </p>
-          <p className="order-card-meta">
-            <b>Created at:</b> {data.created_at ? new Date(data.created_at).toLocaleString() : "—"}
-          </p>
-          <p className="order-card-meta">
-            <b>Updated at:</b> {data.updated_at ? new Date(data.updated_at).toLocaleString() : "—"}
-          </p>
+      {/* Card 1: Product Snapshot */}
+      <div className="od-card">
+        <div className="od-hero">
+          <img
+            src={hero}
+            alt=""
+            className="od-hero-img"
+            onError={(e) => { e.currentTarget.src = "https://placehold.co/600x400"; }}
+          />
+          <div className="od-hero-info">
+            <h3 className="od-hero-name">{product.title || "Product"}</h3>
+            <p className="od-hero-price">
+              <span className="od-hero-price-sym">£</span>
+              {data.final_price ?? product.price ?? "-"}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="order-card" style={{ cursor: "default" }}>
-        <div className="order-card-body" style={{ width: "100%" }}>
-          <h3 style={{ marginBottom: 10 }}>Product Info</h3>
-          <p className="order-card-meta"><b>Description:</b> {product.description || "—"}</p>
-          <p className="order-card-meta"><b>Category:</b> {product.category || "—"}</p>
-          <p className="order-card-meta"><b>Condition:</b> {product.condition || "—"}</p>
-          <p className="order-card-meta"><b>Seller ID:</b> {product.seller_id || data?.seller?.id || "—"}</p>
+      {/* Card 2: Order Status & Details */}
+      <div className="od-card">
+        <h4 className="od-card-title">Order Info</h4>
+        <div className="od-rows">
+          <div className="od-row">
+            <span className="od-row-label">Status</span>
+            <span className={`od-status-badge ${statusClass(data.status)}`}>
+              {data.status ? String(data.status) : "—"}
+            </span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Order ID</span>
+            <span className="od-row-value">{data.id}</span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Created at</span>
+            <span className="od-row-value">{data.created_at ? new Date(data.created_at).toLocaleString() : "—"}</span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Updated at</span>
+            <span className="od-row-value">{data.updated_at ? new Date(data.updated_at).toLocaleString() : "—"}</span>
+          </div>
         </div>
       </div>
 
-      <div className="order-card" style={{ cursor: "default" }}>
-        <div className="order-card-body" style={{ width: "100%" }}>
-          <h3 style={{ marginBottom: 10 }}>{isBuyer ? "Seller Info" : "Buyer Info"}</h3>
-          <p className="order-card-meta"><b>Username:</b> {other?.username || "—"}</p>
-          <p className="order-card-meta"><b>Email:</b> {other?.email || "—"}</p>
-          {other?.avatar_url ? (
-            <img
-              src={resolveMediaUrl(other.avatar_url)}
-              alt=""
-              style={{ width: 56, height: 56, borderRadius: 9999, objectFit: "cover", marginTop: 8 }}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          ) : null}
-          {other?.contact ? (
-            <p className="order-card-meta"><b>Contact:</b> {other.contact}</p>
-          ) : null}
+      {/* Card 3: Product & Seller/Buyer Details */}
+      <div className="od-card">
+        <h4 className="od-card-title">
+          {isBuyer ? "Product & Seller" : "Product & Buyer"}
+        </h4>
+        <div className="od-rows">
+          {/* Description — stacked layout */}
+          {product.description && (
+            <div className="od-desc-row">
+              <div className="od-desc-label">Description</div>
+              <p className="od-desc-text">{product.description}</p>
+            </div>
+          )}
+
+          <div className="od-row">
+            <span className="od-row-label">Category</span>
+            <span className="od-row-value">{product.category || "—"}</span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Condition</span>
+            <span className="od-row-value">{product.condition || "—"}</span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Username</span>
+            <span className="od-row-value">{other?.username || "—"}</span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Email</span>
+            <span className="od-row-value">{other?.email || "—"}</span>
+          </div>
+
+          {other?.avatar_url && (
+            <div className="od-avatar-row">
+              <img
+                src={resolveMediaUrl(other.avatar_url)}
+                alt=""
+                className="od-avatar-img"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+              <span className="od-row-value">{other?.username || ""}</span>
+            </div>
+          )}
+
+          {other?.contact && (
+            <div className="od-row">
+              <span className="od-row-label">Contact</span>
+              <span className="od-row-value">{other.contact}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="order-card" style={{ cursor: "default" }}>
-        <div className="order-card-body" style={{ width: "100%" }}>
-          <h3 style={{ marginBottom: 10 }}>Transaction</h3>
-          <p className="order-card-meta"><b>Final price:</b> £{data.final_price ?? product.price ?? "-"}</p>
-          <p className="order-card-meta"><b>Reviewed by me:</b> {data.reviewed_by_me ? "Yes" : "No"}</p>
-          <p className="order-card-meta"><b>Reviewed by other:</b> {data.reviewed_by_other ? "Yes" : "No"}</p>
-          <p className="order-card-meta"><b>Both reviewed:</b> {data.both_reviewed ? "Yes" : "No"}</p>
+      {/* Card 4: Transaction Summary */}
+      <div className="od-card">
+        <h4 className="od-card-title">Transaction</h4>
+        <div className="od-rows">
+          <div className="od-row">
+            <span className="od-row-label">Final price</span>
+            <span className="od-row-value od-row-value--bold">
+              £{data.final_price ?? product.price ?? "-"}
+            </span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Reviewed by me</span>
+            <span className={`od-row-value ${data.reviewed_by_me ? "od-review-yes" : "od-review-no"}`}>
+              {data.reviewed_by_me ? "Yes" : "No"}
+            </span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Reviewed by other</span>
+            <span className={`od-row-value ${data.reviewed_by_other ? "od-review-yes" : "od-review-no"}`}>
+              {data.reviewed_by_other ? "Yes" : "No"}
+            </span>
+          </div>
+          <div className="od-row">
+            <span className="od-row-label">Both reviewed</span>
+            <span className={`od-row-value ${data.both_reviewed ? "od-review-yes" : "od-review-no"}`}>
+              {data.both_reviewed ? "Yes" : "No"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

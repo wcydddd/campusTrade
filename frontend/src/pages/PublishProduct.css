@@ -1,6 +1,5 @@
 .publish-product {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
   padding: 24px;
   display: flex;
   align-items: flex-start;
@@ -75,17 +74,21 @@
 
 .publish-product-file-btn {
   padding: 8px 14px;
-  border: 1px solid #4f46e5;
+  border: 2px solid #fff;
   border-radius: 8px;
-  background: #4f46e5;
-  color: #fff;
+  background: #fff0a0;
+  color: #333;
   font-size: 14px;
   cursor: pointer;
 }
 
 .publish-product-file-btn:hover {
-  background: #4338ca;
-  border-color: #4338ca;
+  background: #ffe566;
+  border-color: #fff;
+}
+
+.publish-product-file-btn:active {
+  background: #FFD600;
 }
 
 .publish-product-file-name {
@@ -119,9 +122,9 @@
 
 .publish-product-actions button {
   padding: 10px 20px;
-  background: #4f46e5;
-  color: #fff;
-  border: none;
+  background: #fff0a0;
+  color: #333;
+  border: 2px solid #fff;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;

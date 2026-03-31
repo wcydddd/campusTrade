@@ -163,7 +163,7 @@ export default function MyOrders() {
   const fallbackImg = "https://placehold.co/80x80";
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4]">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto flex gap-6 pt-6 px-4 pb-10">
         <UserCenterSidebar />
 
@@ -280,77 +280,55 @@ export default function MyOrders() {
       </div>
 
       {reviewOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(0,0,0,0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-          onClick={() => setReviewOpen(false)}
-        >
-          <div
-            style={{
-              width: "min(560px, 100%)",
-              background: "#fff",
-              borderRadius: 14,
-              padding: 16,
-              border: "1px solid #e5e7eb",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <h3 style={{ margin: 0 }}>Leave a review</h3>
+        <div className="rv-overlay" onClick={() => setReviewOpen(false)}>
+          <div className="rv-card" onClick={(e) => e.stopPropagation()}>
+            <div className="rv-header">
+              <h3 className="rv-title">Leave a review</h3>
               <button
                 type="button"
+                className="rv-close"
                 onClick={() => setReviewOpen(false)}
-                style={{ border: "none", background: "transparent", fontSize: 18, cursor: "pointer" }}
                 aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <p style={{ margin: "10px 0 14px", color: "#475569" }}>
+            <p className="rv-subtitle">
               {tab === "buyer" ? "Review seller" : "Review buyer"} · Order #{reviewOrder?.id?.slice?.(-6) || ""}
             </p>
 
-            <label style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>Rating (1-5)</label>
+            <label className="rv-label">Rating (1-5)</label>
             <select
+              className="rv-select"
               value={reviewRating}
               onChange={(e) => setReviewRating(e.target.value)}
-              style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}
             >
               {[5, 4, 3, 2, 1].map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
 
-            <label style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>Comment (optional)</label>
+            <label className="rv-label">Comment (optional)</label>
             <textarea
+              className="rv-textarea"
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
               rows={4}
-              style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb", resize: "vertical" }}
               placeholder="Share your experience..."
             />
 
             {reviewMsg && (
-              <p style={{ marginTop: 10, color: reviewMsg.toLowerCase().includes("submitted") ? "#16a34a" : "#ef4444", fontWeight: 700 }}>
+              <p className={`rv-msg ${reviewMsg.toLowerCase().includes("submitted") ? "rv-msg--success" : "rv-msg--error"}`}>
                 {reviewMsg}
               </p>
             )}
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-              <button type="button" onClick={() => setReviewOpen(false)} disabled={reviewSubmitting}>
+            <div className="rv-actions">
+              <button type="button" className="rv-btn-cancel" onClick={() => setReviewOpen(false)} disabled={reviewSubmitting}>
                 Cancel
               </button>
-              <button type="button" onClick={submitReview} disabled={reviewSubmitting}>
+              <button type="button" className="rv-btn-submit" onClick={submitReview} disabled={reviewSubmitting}>
                 {reviewSubmitting ? "Submitting..." : "Submit"}
               </button>
             </div>

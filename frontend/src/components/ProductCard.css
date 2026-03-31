@@ -1,20 +1,22 @@
-/* src/components/ProductCard.css */
+/* src/components/ProductCard.css — Warm Orange theme */
 
 .product-card {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: transparent;
+  background: #fff;
   border-radius: 12px;
   overflow: hidden;
-  border: none;
-  box-shadow: none;
+  border: 1px solid #ede0c8;
+  box-shadow: 0 2px 8px rgba(74, 63, 53, 0.05);
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .product-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(242, 113, 28, 0.1);
+  border-color: #f0c8a0;
 }
 
 .product-card-sold {
@@ -27,7 +29,7 @@
 .product-card-img-wrap {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .product-card-img-wrap img {
@@ -35,7 +37,7 @@
   aspect-ratio: 1 / 1;
   object-fit: cover;
   display: block;
-  background: #f1f5f9;
+  background: #f5efe6;
   transition: transform 0.3s ease;
 }
 
@@ -49,14 +51,14 @@
   left: 8px;
   padding: 3px 10px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(74, 63, 53, 0.8);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
-/* Fav button – overlaid on image bottom-right */
+/* Fav button */
 
 .product-card-fav {
   position: absolute;
@@ -68,7 +70,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(74, 63, 53, 0.45);
   border: none;
   font-size: 16px;
   cursor: pointer;
@@ -80,12 +82,12 @@
 
 .product-card-fav:hover {
   transform: scale(1.15);
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(74, 63, 53, 0.65);
 }
 
 .product-card-fav-active {
   color: #ff4d4f;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(74, 63, 53, 0.55);
 }
 
 /* ---- Body / Info ---- */
@@ -94,14 +96,14 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 8px 2px 4px;
+  padding: 10px 12px 10px;
 }
 
 .product-card-title {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #4A3F35;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -120,7 +122,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 800;
-  color: #ff5000;
+  color: #E05A33;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
@@ -130,8 +132,8 @@
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: #8a7560;
+  background: #faf0e4;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -140,5 +142,5 @@
   margin: 0;
   font-size: 12px;
   font-weight: 500;
-  color: #9ca3af;
+  color: #a09080;
 }

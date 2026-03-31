@@ -45,7 +45,7 @@ export default function ForgotPassword() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
+      <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="flex justify-center mb-2">
             <img src={campusTradeLogo} alt="CampusTrade logo" className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10" />
@@ -73,7 +73,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
+    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans text-gray-900">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center mb-2">
           <img src={campusTradeLogo} alt="CampusTrade logo" className="h-auto w-24 max-w-full object-contain -mb-8 sm:w-28 sm:-mb-10" />
@@ -101,7 +101,7 @@ export default function ForgotPassword() {
             <button
               type="submit"
               disabled={!!emailError || isSubmitting}
-              className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60"
+              className="w-full py-2.5 bg-[#fff0a0] text-gray-900 border-2 border-white rounded-lg hover:bg-[#ffe566] active:bg-[#FFD600] transition disabled:opacity-60"
             >
               {isSubmitting ? "Sending..." : "Send Reset Link"}
             </button>

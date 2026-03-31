@@ -32,7 +32,53 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f4f4f4;
+  background: linear-gradient(160deg, #fffbe6 0%, #fff9db 40%, #fff3b0 100%);
+  background-attachment: fixed;
+}
+
+/* ====== Global Xianyu-style floating bubbles ====== */
+.app-bg-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.app-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 214, 0, 0.10);
+  animation: appBubbleFloat 8s ease-in-out infinite;
+}
+
+.app-bubble--1 {
+  width: 280px;
+  height: 280px;
+  top: -70px;
+  right: -50px;
+  animation-delay: 0s;
+}
+
+.app-bubble--2 {
+  width: 200px;
+  height: 200px;
+  bottom: 30px;
+  left: -60px;
+  animation-delay: 2.5s;
+}
+
+.app-bubble--3 {
+  width: 140px;
+  height: 140px;
+  top: 45%;
+  right: 8%;
+  animation-delay: 5s;
+}
+
+@keyframes appBubbleFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
 }
 
 /* Heading defaults */
@@ -42,71 +88,41 @@ h1 {
   margin: 0;
 }
 
-/* Button base styles */
+/* Button base styles — light yellow default, deep yellow on active */
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 2px solid #fff;
   padding: 0.6em 1.2em;
   font-size: 1em;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
-  background-color: #1a1a1a;
-  color: white;
+  background-color: #fff0a0;
+  color: #333;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 button:hover {
-  border-color: #646cff;
-  background-color: #333;
+  background-color: #ffe566;
+  border-color: #fff;
+}
+
+button:active {
+  background-color: #FFD600;
+  border-color: #fff;
 }
 
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 3px solid rgba(255, 214, 0, 0.4);
+  outline-offset: 2px;
 }
 
-/* ====== CampusTrade page styles ====== */
-
-/* Product card */
-.product-card {
-  background: white;
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-}
-
-/* Product image */
-.product-card img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-/* Product name */
-.product-card h3 {
-  margin: 10px 0 5px;
-  font-size: 18px;
-  color: #333;
-}
-
-/* Price */
-.price {
-  color: #2ecc71;
-  font-weight: bold;
-  margin: 4px 0;
-}
+/* ====== CampusTrade page styles (base fallbacks — component CSS takes precedence) ====== */
 
 /* Condition */
 .condition {
-  color: #777;
+  color: #64748b;
   font-size: 14px;
 }
 
@@ -127,6 +143,7 @@ button:focus-visible {
 /* ===== Fix Vite demo default #root max-width causing right gap ===== */
 html, body, #root {
   height: 100%;
+  background-color: #fff3b0;
 }
 
 #root {
@@ -134,4 +151,6 @@ html, body, #root {
   max-width: none;
   margin: 0;
   padding: 0;
+  position: relative;
+  z-index: 1;
 }
