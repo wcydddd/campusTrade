@@ -3,22 +3,12 @@ from utils.ai_helper import analyze_image, get_categories
 from utils.security import get_current_user
 from utils.permission import require_verified_user
 from utils.database import get_database
+from utils.image_service import upload_raw_to_gridfs, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 from config import settings
 from bson import ObjectId
 from datetime import datetime, timedelta
-import os
-import uuid
-from pathlib import Path
 
 router = APIRouter(prefix="/ai", tags=["AI"])
-
-# Ensure upload directory exists
-UPLOAD_DIR = Path(settings.upload_dir)
-UPLOAD_DIR.mkdir(exist_ok=True)
-
-# Allowed image formats
-ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024  # Convert to bytes
 
 # AI 每日配额：每个用户每天最多调用次数
 DAILY_AI_LIMIT = 20
@@ -207,38 +197,31 @@ async def analyze_and_save_image(
             detail=f"Invalid file format. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
 
-    # Read file content
     content = await file.read()
 
-    # Check file size
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400,
+            status_code=413,
             detail=f"File too large. Maximum size: {settings.max_upload_size_mb}MB"
         )
 
-    # Generate unique filename
-    filename = f"{uuid.uuid4()}.{file_ext}"
-    filepath = UPLOAD_DIR / filename
-
-    # Save file
-    with open(filepath, "wb") as f:
-        f.write(content)
-
-    # Call AI analysis
     result = await analyze_image(content)
 
     if not result["success"]:
-        os.remove(filepath)
         raise HTTPException(
             status_code=500,
             detail=result["error"]
         )
 
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+    import uuid
+    unique_name = f"{uuid.uuid4()}.{file_ext}"
+    image_url = await upload_raw_to_gridfs(content, unique_name, mime_map.get(file_ext, "application/octet-stream"))
+
     return {
         "success": True,
         "data": result["data"],
-        "image_url": f"/uploads/{filename}",
+        "image_url": image_url,
         "quota": {
             "used": quota["used"],
             "remaining": quota["remaining"],

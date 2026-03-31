@@ -2,22 +2,20 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from utils.database import get_database
 from utils.security import get_current_user, get_optional_user
 from utils.ai_helper import analyze_image, get_categories
-from utils.image_service import process_and_save_image, process_image_bytes, delete_image
+from utils.image_service import (
+    process_and_save_image, process_image_bytes,
+    delete_image, save_processed_to_gridfs,
+    ALLOWED_EXTENSIONS, MAX_FILE_SIZE,
+)
 from routes.notifications import create_notification
 from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
 from config import settings
 
 router = APIRouter(prefix="/products", tags=["Products"])
-
-UPLOAD_DIR = Path(settings.upload_dir)
-UPLOAD_DIR.mkdir(exist_ok=True)
-ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-MAX_FILE_SIZE = settings.max_upload_size_mb * 1024 * 1024
 
 
 # =====================================================
@@ -502,19 +500,20 @@ async def create_product_with_ai(
     user, uid = await get_verified_user(current_user, db)
 
     content = await file.read()
-    result = process_image_bytes(content, file.filename or "image.jpg")
-    image_url = result["image_url"]
-    thumb_url = result.get("thumb_url")
-    file_content = result["content"]
+    processed = process_image_bytes(content, file.filename or "image.jpg")
+    file_content = processed["content"]
 
     ai_result = await analyze_image(file_content)
 
     if not ai_result["success"]:
-        delete_image(image_url)
         raise HTTPException(
             status_code=500,
             detail=f"AI analysis failed: {ai_result.get('error', 'Unknown error')}"
         )
+
+    urls = await save_processed_to_gridfs(processed)
+    image_url = urls["image_url"]
+    thumb_url = urls.get("thumb_url")
 
     ai_data = ai_result["data"]
 
@@ -659,7 +658,7 @@ async def update_product(
     new_images = update_data.get("images", []) if isinstance(update_data.get("images"), list) else []
     removed_images = [u for u in old_images if u not in new_images]
     for image_url in removed_images:
-        delete_image(image_url)
+        await delete_image(image_url)
     await db.products.update_one(
         {"_id": pid},
         {"$set": update_data}
@@ -718,7 +717,7 @@ async def delete_product(
         raise HTTPException(status_code=403, detail="You can only delete your own products")
 
     for image_url in existing.get("images", []):
-        delete_image(image_url)
+        await delete_image(image_url)
 
     await db.products.delete_one({"_id": pid})
     return {"ok": True, "message": "Product deleted successfully"}

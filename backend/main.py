@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import uvicorn
-import os
 
 from utils.database import connect_to_mongo, close_mongo_connection, get_database
 from routes.auth import router as auth_router
@@ -16,6 +14,7 @@ from routes.orders import router as orders_router
 from routes.favorites import router as favorites_router
 from routes.reports import router as reports_router
 from routes.reviews import router as reviews_router
+from routes.images import router as images_router
 
 app = FastAPI(
     title="CampusTrade API",
@@ -25,11 +24,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# 确保 uploads 文件夹存在
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
-# CORS 配置（开发环境放宽 Origin，方便本地调试）
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -57,6 +52,7 @@ app.include_router(orders_router)
 app.include_router(favorites_router)
 app.include_router(reports_router)
 app.include_router(reviews_router)
+app.include_router(images_router)
 
 # 启动时连接数据库 + 建立索引
 @app.on_event("startup")

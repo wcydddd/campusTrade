@@ -1,11 +1,14 @@
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorGridFSBucket
 from typing import Optional
 import certifi
 from config import settings
 
+
 class Database:
     def __init__(self) -> None:
         self.client: Optional[AsyncIOMotorClient] = None
+        self.gridfs_bucket: Optional[AsyncIOMotorGridFSBucket] = None
+
 
 db = Database()
 
@@ -34,17 +37,21 @@ async def connect_to_mongo() -> None:
             tlsCAFile=certifi.where() if is_atlas else None,
         )
 
-        # Verify the connection is alive
         await db.client.admin.command("ping")
 
         db_name = settings.mongodb_db_name
         server_info = await db.client.server_info()
         version = server_info.get("version", "unknown")
 
+        database = db.client[db_name]
+        db.gridfs_bucket = AsyncIOMotorGridFSBucket(database)
+
         print(f"[db] Connected to {target} successfully  (server v{version}, db={db_name})")
+        print("[db] GridFS bucket initialized")
 
     except Exception as exc:
         db.client = None
+        db.gridfs_bucket = None
         print(f"[db] FAILED to connect to {target}: {exc}")
         raise SystemExit(
             f"Cannot start application — database connection failed: {exc}"
@@ -63,3 +70,10 @@ def get_database() -> AsyncIOMotorDatabase:
     if db.client is None:
         raise RuntimeError("Database not connected. Call connect_to_mongo() first.")
     return db.client[settings.mongodb_db_name]
+
+
+def get_gridfs_bucket() -> AsyncIOMotorGridFSBucket:
+    """Return the GridFS bucket instance."""
+    if db.gridfs_bucket is None:
+        raise RuntimeError("GridFS bucket not initialized. Call connect_to_mongo() first.")
+    return db.gridfs_bucket

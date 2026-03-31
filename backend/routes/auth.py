@@ -381,22 +381,20 @@ async def upload_avatar(
     current_user: dict = Depends(get_current_user),
 ):
     import uuid
-    from pathlib import Path
     from config import settings
+    from utils.image_service import upload_raw_to_gridfs
 
     ext = (file.filename or "").split(".")[-1].lower()
     if ext not in ("jpg", "jpeg", "png", "webp"):
         raise HTTPException(status_code=400, detail="Allowed: jpg, png, webp")
     content = await file.read()
     if len(content) > (settings.max_upload_size_mb * 1024 * 1024):
-        raise HTTPException(status_code=400, detail=f"Max size {settings.max_upload_size_mb}MB")
-    upload_dir = Path(settings.upload_dir)
-    upload_dir.mkdir(exist_ok=True)
+        raise HTTPException(status_code=413, detail=f"Max size {settings.max_upload_size_mb}MB")
+
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
     name = f"{uuid.uuid4()}.{ext}"
-    path = upload_dir / name
-    with open(path, "wb") as f:
-        f.write(content)
-    avatar_url = f"/uploads/{name}"
+    avatar_url = await upload_raw_to_gridfs(content, name, mime_map.get(ext, "application/octet-stream"))
+
     db = get_database()
     uid = ObjectId(current_user["user_id"])
     await db.users.update_one({"_id": uid}, {"$set": {"avatar_url": avatar_url}})
