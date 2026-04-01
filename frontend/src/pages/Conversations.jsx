@@ -59,7 +59,7 @@ const MSG_CATEGORIES = [
   {
     key: "reviews",
     label: "Reviews",
-    to: "/my-reviews",
+    to: "/reviews",
     bg: "bg-pink-50",
     color: "text-pink-500",
     icon: (

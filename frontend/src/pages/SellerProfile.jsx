@@ -311,7 +311,7 @@ export default function SellerProfile() {
                       <li className="me-dropdown-divider" />
                       <li><Link to="/my-orders" onClick={() => setMeMenuOpen(false)}>My orders</Link></li>
                       <li><Link to="/my-favorites" onClick={() => setMeMenuOpen(false)}>My favorites</Link></li>
-                      <li><Link to="/my-reviews" onClick={() => setMeMenuOpen(false)}>My reviews</Link></li>
+                      <li><Link to="/reviews" onClick={() => setMeMenuOpen(false)}>Reviews</Link></li>
                       <li><Link to="/recent-viewed" onClick={() => setMeMenuOpen(false)}>Recently viewed</Link></li>
                       <li className="me-dropdown-divider" />
                       <li><button type="button" className="dropdown-action" onClick={() => { setMeMenuOpen(false); handleLogout(); }}>Log out</button></li>

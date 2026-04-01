@@ -147,13 +147,14 @@ function App() {
           }
         />
         <Route
-          path="/my-reviews"
+          path="/reviews"
           element={
             <ProtectedRoute>
               <MyReviews />
             </ProtectedRoute>
           }
         />
+        <Route path="/my-reviews" element={<Navigate to="/reviews" replace />} />
         <Route
           path="/recent-viewed"
           element={

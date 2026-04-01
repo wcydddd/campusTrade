@@ -4,33 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="89610424-0ff3-4ae7-acbf-feb422630c96" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/notification.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models/notification.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/review.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models/review.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/messages.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/messages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/notifications.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/products.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/products.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/reports.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/reports.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/reviews.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/reviews.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/ws.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/ws.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/NotificationBell.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/NotificationBell.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/AdminProducts.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/AdminProducts.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/AdminReports.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/AdminReports.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/AdminUsers.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/AdminUsers.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Conversations.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Conversations.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrders.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrders.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrders.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrders.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetail.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetail.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetail.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductDetail.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SellerProfile.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/SellerProfile.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SellerProfile.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/SellerProfile.jsx" afterDir="false" />
-    </list>
+    <list default="true" id="89610424-0ff3-4ae7-acbf-feb422630c96" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -95,7 +69,7 @@
       <workItem from="1773579264935" duration="22000" />
       <workItem from="1774631653631" duration="19000" />
       <workItem from="1774812338777" duration="683000" />
-      <workItem from="1774984282004" duration="4959000" />
+      <workItem from="1774984282004" duration="5835000" />
     </task>
     <servers />
   </component>
