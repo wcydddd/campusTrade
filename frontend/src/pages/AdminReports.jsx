@@ -14,6 +14,14 @@ const REASON_LABELS = {
   other: "Other",
 };
 
+function reportStatusTagClass(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "pending") return "au-tag au-tag--pending";
+  if (s === "resolved") return "au-tag au-tag--available";
+  if (s === "dismissed") return "au-tag au-tag--sold";
+  return "au-tag au-tag--user";
+}
+
 export default function AdminReports() {
   const [data, setData] = useState({ items: [], total: 0, page: 1, size: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
@@ -67,27 +75,26 @@ export default function AdminReports() {
     }
   }
 
-  const statusColor = (s) => {
-    if (s === "pending") return { background: "#fef9c3", color: "#854d0e" };
-    if (s === "resolved") return { background: "#f0fdf4", color: "#15803d" };
-    if (s === "dismissed") return { background: "#f1f5f9", color: "#64748b" };
-    return {};
-  };
-
   return (
-    <div className="admin-users">
-      <div className="admin-users-header">
-        <h1>Report Management</h1>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Link to="/admin/users" className="admin-users-back">Users</Link>
-          <Link to="/admin/products" className="admin-users-back">Products</Link>
-          <Link to="/home" className="admin-users-back">Home</Link>
+    <div className="au-page">
+      <div className="au-header">
+        <h1 className="au-title">Report Management</h1>
+        <div className="au-nav">
+          <Link to="/admin/review" className="au-nav-link">Review</Link>
+          <Link to="/admin/users" className="au-nav-link">Users</Link>
+          <Link to="/admin/products" className="au-nav-link">Products</Link>
+          <Link to="/home" className="au-nav-link">Home</Link>
         </div>
       </div>
 
-      <div className="admin-users-toolbar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}>
+      <div className="au-search-row">
+        <label className="au-filter-label" htmlFor="admin-reports-status">Status</label>
+        <select
+          id="admin-reports-status"
+          className="au-role-select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option value="">All</option>
           <option value="pending">Pending</option>
           <option value="resolved">Resolved</option>
@@ -95,14 +102,14 @@ export default function AdminReports() {
         </select>
       </div>
 
-      {error && <p className="admin-users-error">{error}</p>}
-      {loading && <p className="admin-users-msg">Loading...</p>}
+      {error && <p className="au-error">{error}</p>}
+      {loading && <p className="au-loading">Loading...</p>}
 
       {!loading && (
         <>
-          <p className="admin-users-meta">{data.total} total, page {data.page} / {totalPages}</p>
-          <div className="admin-users-table-wrap">
-            <table className="admin-users-table">
+          <div className="au-table-card">
+            <p className="au-table-meta">{data.total} total, page {data.page} / {totalPages}</p>
+            <table className="au-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -110,7 +117,7 @@ export default function AdminReports() {
                   <th>Reason</th>
                   <th>Description</th>
                   <th>Status</th>
-                  <th>Admin Note</th>
+                  <th>Admin note</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -118,45 +125,56 @@ export default function AdminReports() {
                 {data.items.map((r) => (
                   <tr key={r.id}>
                     <td>
-                      <Link to={`/products/${r.product_id}`} style={{ color: "#4f46e5" }}>
+                      <Link to={`/products/${r.product_id}`} className="au-cell-link">
                         {r.product_title || r.product_id}
                       </Link>
                     </td>
                     <td>{r.reporter_username || r.reporter_id}</td>
                     <td>{REASON_LABELS[r.reason] || r.reason}</td>
-                    <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {r.description || "-"}
+                    <td className="au-table-cell-ellipsis" title={r.description || ""}>
+                      {r.description || "—"}
                     </td>
                     <td>
-                      <span style={{
-                        display: "inline-block", padding: "2px 10px", borderRadius: 999,
-                        fontSize: 12, fontWeight: 600, ...statusColor(r.status),
-                      }}>
-                        {r.status}
-                      </span>
+                      <span className={reportStatusTagClass(r.status)}>{r.status}</span>
                     </td>
-                    <td style={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {r.admin_note || "-"}
+                    <td className="au-table-cell-ellipsis au-table-cell-ellipsis--narrow" title={r.admin_note || ""}>
+                      {r.admin_note || "—"}
                     </td>
-                    <td className="admin-users-actions">
-                      {r.status === "pending" && (
-                        <>
-                          <button type="button" className="btn-ban" disabled={actionLoading === r.id}
-                            onClick={() => handleAction(r.id, "takedown")}>Takedown</button>
-                          <button type="button" className="btn-unverify" disabled={actionLoading === r.id}
-                            onClick={() => handleAction(r.id, "dismissed")}>Ignore</button>
-                        </>
-                      )}
-                      {r.status !== "pending" && <span style={{ color: "#94a3b8", fontSize: 12 }}>Done</span>}
+                    <td>
+                      <div className="au-actions">
+                        {r.status === "pending" && (
+                          <>
+                            <button
+                              type="button"
+                              className="au-btn-ban"
+                              disabled={actionLoading === r.id}
+                              onClick={() => handleAction(r.id, "takedown")}
+                            >
+                              Takedown
+                            </button>
+                            <button
+                              type="button"
+                              className="au-btn-unverify"
+                              disabled={actionLoading === r.id}
+                              onClick={() => handleAction(r.id, "dismissed")}
+                            >
+                              Ignore
+                            </button>
+                          </>
+                        )}
+                        {r.status !== "pending" && (
+                          <span className="au-status-text--gray" style={{ fontSize: 12, fontWeight: 600 }}>Done</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {data.items.length === 0 && <p className="au-empty">No reports found.</p>}
           </div>
-          {data.items.length === 0 && <p className="admin-users-msg">No reports found.</p>}
 
-          <div className="admin-users-pagination">
+          <div className="au-pagination">
             <button type="button" disabled={data.page <= 1} onClick={() => fetchReports(data.page - 1, statusFilter)}>Previous</button>
             <span>{data.page} / {totalPages}</span>
             <button type="button" disabled={data.page >= totalPages} onClick={() => fetchReports(data.page + 1, statusFilter)}>Next</button>

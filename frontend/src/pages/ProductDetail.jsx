@@ -169,8 +169,9 @@ export default function ProductDetail() {
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (!cancelled) {
-          setReviews(Array.isArray(data.items) ? data.items : []);
-          setReviewSummary(data.summary || null);
+          const asSeller = data.as_seller;
+          setReviews(Array.isArray(asSeller?.items) ? asSeller.items : []);
+          setReviewSummary(asSeller?.summary || null);
         }
       } catch (_) {}
       finally {
@@ -445,7 +446,7 @@ export default function ProductDetail() {
                         {userLabel?.[0]?.toUpperCase() || "M"}
                       </span>
                     )}
-                    <span>{userLabel}</span>
+                    <span className="ct-account-name" title={userLabel}>{userLabel}</span>
                     <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
                   </button>
                   {meMenuOpen && (

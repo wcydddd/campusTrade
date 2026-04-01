@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import { useUnread } from "../context/UnreadContext";
+import NotificationBell from "../components/NotificationBell";
 import { ChatPanel } from "./Chat";
 import campusTradeLogo from "../assets/uol-secondhand-logo.png";
 
@@ -109,22 +110,6 @@ export default function Conversations() {
     return () => { cancelled = true; };
   }, []);
 
-  // Mark all notifications as read when entering Messages list; sync badge count
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
-        if (!res.ok) return;
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled && typeof data.total_unread === "number") {
-          window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: data.total_unread } }));
-        }
-      } catch { /* ignore */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
   function handleSelectChat(c) {
     setActiveChat({ otherUserId: c.other_user_id, productId: c.product_id || null });
     setConversations((prev) =>
@@ -177,6 +162,9 @@ export default function Conversations() {
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </button>
+            <div className="flex items-center shrink-0">
+              <NotificationBell variant="utility" />
+            </div>
             <Link to="/conversations" className="p-2 rounded-lg text-gray-900 hover:bg-yellow-500/30 transition-colors relative" title="Messages">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

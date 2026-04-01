@@ -221,3 +221,61 @@ async def create_notification(
 
     from routes.ws import manager
     await manager.send_personal(user_id, payload)
+
+
+async def notify_all_admins(
+    ntype: str,
+    title: str,
+    body: str,
+    link: Optional[str] = None,
+    meta: Optional[dict] = None,
+):
+    """
+    Send the same in-app notification to every user with role admin or moderator
+    (moderators may use admin UI in the future; admins always can).
+    Failures for one recipient do not block others.
+    """
+    db = get_database()
+    cursor = db.users.find(
+        {"role": {"$in": ["admin", "moderator"]}},
+        {"_id": 1},
+    )
+    ids: List[str] = []
+    async for d in cursor:
+        ids.append(str(d["_id"]))
+    for aid in ids:
+        try:
+            await create_notification(aid, ntype, title, body, link, meta)
+        except Exception:
+            continue
+
+
+async def notify_admins_pending_product(product_id: str, title: str):
+    """Call when a listing is submitted or re-submitted for admin review."""
+    try:
+        safe_title = (title or "Untitled").strip() or "Untitled"
+        await notify_all_admins(
+            "admin_review",
+            "Product awaiting review",
+            f'"{safe_title}" needs your approval.',
+            link="/admin/review",
+            meta={"product_id": product_id},
+        )
+    except Exception:
+        pass
+
+
+async def notify_admins_new_report(product_id: str, product_title: str, reason: str):
+    """Call when a user submits a product report."""
+    try:
+        safe_title = (product_title or "A product").strip() or "A product"
+        r = (reason or "").strip() or "unspecified"
+        await notify_all_admins(
+            "admin_report",
+            "New product report",
+            f'"{safe_title}" was reported: {r}.',
+            link="/admin/reports",
+            meta={"product_id": product_id, "reason": r},
+        )
+    except Exception:
+        pass

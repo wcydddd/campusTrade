@@ -234,6 +234,7 @@
 .pd-action-bar-pinned {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 10px;
   padding: 16px 24px;
@@ -242,13 +243,20 @@
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 
+/* Full-width row below buttons so text is never clipped by card overflow */
 .pd-action-msg {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 4px 4px 0;
+  box-sizing: border-box;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  padding: 0 6px;
+  line-height: 1.4;
+  white-space: normal;
+  text-align: center;
+  word-break: break-word;
 }
 
 /* Favorite button */
@@ -284,6 +292,7 @@
 /* Chat / Message button — bright yellow */
 .pd-action-chat {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,6 +319,7 @@
 /* Buy Now button — dark */
 .pd-action-buy {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;

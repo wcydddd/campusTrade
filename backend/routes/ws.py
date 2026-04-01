@@ -196,21 +196,7 @@ async def _handle_chat(from_id: str, data: dict, websocket: WebSocket):
 
     delivered = await manager.send_personal(to_id, envelope)
 
-    # Create a notification for the recipient
-    from routes.notifications import create_notification
-
-    sender = await db.users.find_one({"_id": ObjectId(from_id)})
-    sender_name = sender.get("username", "Someone") if sender else "Someone"
-    notif_link = f"/chat/{from_id}"
-    if product_id:
-        notif_link += f"?product={product_id}"
-    await create_notification(
-        user_id=to_id,
-        ntype="new_order",
-        title="New message",
-        body=f"{sender_name}: {content[:80]}",
-        link=notif_link,
-    )
+    # Chat unread is shown on Messages only — do not duplicate with Notifications bell.
 
     # Always push unread count to recipient if they're online
     unread = await db.messages.count_documents({

@@ -4,7 +4,13 @@ from datetime import datetime
 
 from utils.database import get_database
 from utils.permission import require_verified_user
-from models.review import ReviewCreate, ReviewResponse, UserReviewsResponse, UserReputationSummary
+from models.review import (
+    ReviewCreate,
+    ReviewResponse,
+    UserReviewsByRoleResponse,
+    UserReputationSection,
+    UserReputationSummary,
+)
 from models.order import OrderStatus
 
 
@@ -45,6 +51,8 @@ async def create_review(
         raise HTTPException(status_code=403, detail="You can only review orders you participated in")
 
     reviewee_id = seller_id if uid == buyer_id else buyer_id
+    # 被评价方在本单中的角色（买家评卖家 → 对方是 seller；卖家评买家 → 对方是 buyer）
+    reviewee_role = "seller" if uid == buyer_id else "buyer"
 
     existing = await db.reviews.find_one({"order_id": oid, "reviewer_user_id": uid})
     if existing:
@@ -55,6 +63,7 @@ async def create_review(
         "order_id": oid,
         "reviewer_user_id": uid,
         "reviewee_user_id": reviewee_id,
+        "reviewee_role": reviewee_role,
         "rating": int(payload.rating),
         "comment": (payload.comment or "").strip() or None,
         "created_at": now,
@@ -64,68 +73,19 @@ async def create_review(
     return {"ok": True, "id": str(res.inserted_id)}
 
 
-@router.get("/user/{user_id}", response_model=UserReviewsResponse)
-async def get_user_reviews(
-    user_id: str,
-    limit: int = Query(20, ge=1, le=100),
-    skip: int = Query(0, ge=0, le=10000),
-):
-    """查询某个用户的评价列表 + 信誉汇总（平均分、总数）。"""
-    db = get_database()
-    target = _oid(user_id)
-
-    # 汇总
-    summary_cursor = db.reviews.aggregate(
-        [
-            {"$match": {"reviewee_user_id": target}},
-            {
-                "$group": {
-                    "_id": "$reviewee_user_id",
-                    "avg_rating": {"$avg": "$rating"},
-                    "total_reviews": {"$sum": 1},
-                }
-            },
-        ]
+def _reputation_summary(stats_rows: list, uid_str: str) -> UserReputationSummary:
+    if not stats_rows:
+        return UserReputationSummary(user_id=uid_str, avg_rating=0.0, total_reviews=0)
+    row = stats_rows[0]
+    return UserReputationSummary(
+        user_id=uid_str,
+        avg_rating=round(float(row.get("avg_rating") or 0.0), 2),
+        total_reviews=int(row.get("total_reviews") or 0),
     )
-    summary_docs = await summary_cursor.to_list(length=1)
-    if summary_docs:
-        avg_rating = float(summary_docs[0].get("avg_rating") or 0.0)
-        total_reviews = int(summary_docs[0].get("total_reviews") or 0)
-    else:
-        avg_rating = 0.0
-        total_reviews = 0
 
-    # 列表（带 reviewer 用户名）
-    pipeline = [
-        {"$match": {"reviewee_user_id": target}},
-        {"$sort": {"created_at": -1}},
-        {"$skip": skip},
-        {"$limit": limit},
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "reviewer_user_id",
-                "foreignField": "_id",
-                "as": "reviewer",
-            }
-        },
-        {"$unwind": {"path": "$reviewer", "preserveNullAndEmptyArrays": True}},
-        {
-            "$project": {
-                "_id": 1,
-                "order_id": 1,
-                "reviewer_user_id": 1,
-                "reviewee_user_id": 1,
-                "rating": 1,
-                "comment": 1,
-                "created_at": 1,
-                "reviewer_username": {"$ifNull": ["$reviewer.username", "Deleted user"]},
-            }
-        },
-    ]
-    docs = await db.reviews.aggregate(pipeline).to_list(length=limit)
 
-    items = [
+def _review_items_from_docs(docs: list) -> list[ReviewResponse]:
+    return [
         ReviewResponse(
             id=str(d["_id"]),
             order_id=str(d["order_id"]),
@@ -135,17 +95,153 @@ async def get_user_reviews(
             comment=d.get("comment"),
             created_at=d["created_at"],
             reviewer_username=d.get("reviewer_username"),
+            reviewee_role=d.get("reviewee_role"),
         )
         for d in docs
     ]
 
-    return UserReviewsResponse(
-        summary=UserReputationSummary(
-            user_id=str(target),
-            avg_rating=round(avg_rating, 2),
-            total_reviews=total_reviews,
+
+@router.get("/user/{user_id}", response_model=UserReviewsByRoleResponse)
+async def get_user_reviews(
+    user_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    skip: int = Query(0, ge=0, le=10000),
+):
+    """查询某用户「作为卖家收到的评价」与「作为买家收到的评价」（分项汇总 + 列表）。"""
+    db = get_database()
+    target = _oid(user_id)
+    uid_str = str(target)
+
+    effective_role_expr = {
+        "$ifNull": [
+            "$reviewee_role",
+            {
+                "$let": {
+                    "vars": {"o": {"$arrayElemAt": ["$ord", 0]}},
+                    "in": {
+                        "$cond": [
+                            {
+                                "$and": [
+                                    {"$ne": ["$$o", None]},
+                                    {"$eq": ["$reviewee_user_id", "$$o.seller_id"]},
+                                ]
+                            },
+                            "seller",
+                            {
+                                "$cond": [
+                                    {
+                                        "$and": [
+                                            {"$ne": ["$$o", None]},
+                                            {"$eq": ["$reviewee_user_id", "$$o.buyer_id"]},
+                                        ]
+                                    },
+                                    "buyer",
+                                    "unknown",
+                                ]
+                            },
+                        ]
+                    },
+                }
+            },
+        ]
+    }
+
+    item_project = {
+        "$project": {
+            "_id": 1,
+            "order_id": 1,
+            "reviewer_user_id": 1,
+            "reviewee_user_id": 1,
+            "rating": 1,
+            "comment": 1,
+            "created_at": 1,
+            "reviewee_role": "$effective_role",
+            "reviewer_username": {"$ifNull": ["$reviewer.username", "Deleted user"]},
+        }
+    }
+
+    user_lookup = [
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "reviewer_user_id",
+                "foreignField": "_id",
+                "as": "reviewer",
+            }
+        },
+        {"$unwind": {"path": "$reviewer", "preserveNullAndEmptyArrays": True}},
+        item_project,
+    ]
+
+    pipeline = [
+        {"$match": {"reviewee_user_id": target}},
+        {
+            "$lookup": {
+                "from": "orders",
+                "localField": "order_id",
+                "foreignField": "_id",
+                "as": "ord",
+            }
+        },
+        {"$addFields": {"effective_role": effective_role_expr}},
+        {
+            "$facet": {
+                "seller_stats": [
+                    {"$match": {"effective_role": "seller"}},
+                    {
+                        "$group": {
+                            "_id": None,
+                            "avg_rating": {"$avg": "$rating"},
+                            "total_reviews": {"$sum": 1},
+                        }
+                    },
+                ],
+                "buyer_stats": [
+                    {"$match": {"effective_role": "buyer"}},
+                    {
+                        "$group": {
+                            "_id": None,
+                            "avg_rating": {"$avg": "$rating"},
+                            "total_reviews": {"$sum": 1},
+                        }
+                    },
+                ],
+                "seller_items": [
+                    {"$match": {"effective_role": "seller"}},
+                    {"$sort": {"created_at": -1}},
+                    {"$skip": skip},
+                    {"$limit": limit},
+                    *user_lookup,
+                ],
+                "buyer_items": [
+                    {"$match": {"effective_role": "buyer"}},
+                    {"$sort": {"created_at": -1}},
+                    {"$skip": skip},
+                    {"$limit": limit},
+                    *user_lookup,
+                ],
+            }
+        },
+    ]
+
+    rows = await db.reviews.aggregate(pipeline).to_list(length=1)
+    bucket = rows[0] if rows else {}
+
+    seller_stats = bucket.get("seller_stats") or []
+    buyer_stats = bucket.get("buyer_stats") or []
+    seller_docs = bucket.get("seller_items") or []
+    buyer_docs = bucket.get("buyer_items") or []
+
+    return UserReviewsByRoleResponse(
+        user_id=uid_str,
+        as_seller=UserReputationSection(
+            summary=_reputation_summary(seller_stats, uid_str),
+            items=_review_items_from_docs(seller_docs),
         ),
-        items=items,
+        as_buyer=UserReputationSection(
+            summary=_reputation_summary(buyer_stats, uid_str),
+            items=_review_items_from_docs(buyer_docs),
+        ),
     )
 
 

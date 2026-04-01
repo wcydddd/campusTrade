@@ -54,6 +54,7 @@ export default function OrderDetail() {
   }, [user?.id, data?.buyer?.id]);
 
   const other = isBuyer ? data?.seller : data?.buyer;
+  const peerProfileId = other?.id != null ? String(other.id) : "";
   const product = data?.product || {};
   const images = Array.isArray(product.images) ? product.images : [];
   const hero = resolveMediaUrl(images[0]) || "https://placehold.co/600x400";
@@ -164,8 +165,26 @@ export default function OrderDetail() {
           </div>
           <div className="od-row">
             <span className="od-row-label">Username</span>
-            <span className="od-row-value">{other?.username || "—"}</span>
+            <span className="od-row-value">
+              {peerProfileId && other?.username ? (
+                <Link className="od-peer-profile-link" to={`/seller/${peerProfileId}`}>
+                  {other.username}
+                </Link>
+              ) : (
+                other?.username || "—"
+              )}
+            </span>
           </div>
+          {peerProfileId && (
+            <div className="od-row">
+              <span className="od-row-label">Store</span>
+              <span className="od-row-value">
+                <Link className="od-peer-profile-link" to={`/seller/${peerProfileId}`}>
+                  {isBuyer ? "View seller's listings →" : "View buyer's listings →"}
+                </Link>
+              </span>
+            </div>
+          )}
           <div className="od-row">
             <span className="od-row-label">Email</span>
             <span className="od-row-value">{other?.email || "—"}</span>
@@ -173,13 +192,27 @@ export default function OrderDetail() {
 
           {other?.avatar_url && (
             <div className="od-avatar-row">
-              <img
-                src={resolveMediaUrl(other.avatar_url)}
-                alt=""
-                className="od-avatar-img"
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
-              <span className="od-row-value">{other?.username || ""}</span>
+              {peerProfileId ? (
+                <Link className="od-peer-profile-block" to={`/seller/${peerProfileId}`}>
+                  <img
+                    src={resolveMediaUrl(other.avatar_url)}
+                    alt=""
+                    className="od-avatar-img"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <span className="od-row-value">{other?.username || ""}</span>
+                </Link>
+              ) : (
+                <>
+                  <img
+                    src={resolveMediaUrl(other.avatar_url)}
+                    alt=""
+                    className="od-avatar-img"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <span className="od-row-value">{other?.username || ""}</span>
+                </>
+              )}
             </div>
           )}
 

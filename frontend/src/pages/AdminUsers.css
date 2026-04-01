@@ -6,6 +6,11 @@
   min-height: 100vh;
   padding: 28px 24px;
   font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  background: #fffcef;
+  background-image:
+    radial-gradient(ellipse 140% 90% at 0% -10%, rgba(255, 214, 0, 0.14), transparent 55%),
+    radial-gradient(ellipse 100% 70% at 100% 20%, rgba(255, 180, 0, 0.1), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255, 230, 120, 0.08), transparent 45%);
 }
 
 /* ---------- Header ---------- */
@@ -142,7 +147,8 @@
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-bottom: 20px;
   max-width: 1100px;
 }
@@ -219,6 +225,106 @@
 .au-tag--user {
   background: #f1f5f9;
   color: #64748b;
+}
+
+/* Product status tags (admin product list) */
+.au-tag--available {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.au-tag--sold {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.au-tag--pending {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.au-tag--removed,
+.au-tag--rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.au-tag--reserved {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* ---------- Admin product list ---------- */
+
+.au-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-width: 1100px;
+}
+
+.au-search-row .au-search {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 220px;
+  max-width: 520px;
+}
+
+.au-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.au-product-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f3f4f6;
+  vertical-align: middle;
+}
+
+.au-product-thumb--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.au-cell-link {
+  color: #333;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.au-cell-link:hover {
+  color: #c45500;
+  text-decoration: underline;
+}
+
+.au-table-cell-ellipsis {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.au-table-cell-ellipsis--narrow {
+  max-width: 160px;
 }
 
 /* ---------- Status indicators ---------- */
@@ -417,6 +523,25 @@
   }
 
   .au-search {
+    max-width: 100%;
+  }
+
+  .au-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .au-search-row .au-filter-label {
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+
+  .au-search-row .au-search {
+    max-width: 100%;
+  }
+
+  .au-search-row .au-role-select {
+    width: 100%;
     max-width: 100%;
   }
 }

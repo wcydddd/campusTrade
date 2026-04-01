@@ -5,6 +5,7 @@ from bson import ObjectId
 from utils.database import get_database
 from utils.permission import require_verified_user
 from models.report import ReportCreate
+from routes.notifications import notify_admins_new_report
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -48,4 +49,9 @@ async def create_report(
         "created_at": now,
     }
     await db.reports.insert_one(doc)
+    await notify_admins_new_report(
+        str(pid),
+        product.get("title", ""),
+        payload.reason,
+    )
     return {"ok": True, "message": "Report submitted"}

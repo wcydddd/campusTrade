@@ -11,7 +11,7 @@ from utils.image_service import (
     delete_image, save_processed_to_gridfs,
     ALLOWED_EXTENSIONS, MAX_FILE_SIZE,
 )
-from routes.notifications import create_notification
+from routes.notifications import create_notification, notify_admins_pending_product
 from models.product import ProductCreate, ProductResponse, ProductInDB, ProductStatus
 from config import settings
 
@@ -284,6 +284,33 @@ async def get_my_browsing_history(
     ]
 
     docs = await db.browsing_history.aggregate(pipeline).to_list(length=limit)
+
+    # Match list_products / trending: attach is_favorited for the current user
+    fav_set: set = set()
+    try:
+        product_oids = []
+        for d in docs:
+            pid_str = (d.get("product") or {}).get("id")
+            if pid_str and ObjectId.is_valid(pid_str):
+                product_oids.append(ObjectId(pid_str))
+        if product_oids:
+            fav_docs = await db.favorites.find(
+                {"user_id": uid, "product_id": {"$in": product_oids}}
+            ).to_list(length=len(product_oids))
+            fav_set = {f["product_id"] for f in fav_docs}
+    except Exception:
+        pass
+
+    for d in docs:
+        p = d.get("product")
+        if not isinstance(p, dict):
+            continue
+        pid_str = p.get("id")
+        try:
+            p["is_favorited"] = ObjectId.is_valid(pid_str) and ObjectId(pid_str) in fav_set
+        except Exception:
+            p["is_favorited"] = False
+
     return {"items": docs}
 
 
@@ -411,6 +438,7 @@ async def create_product(
 
     res = await db.products.insert_one(doc)
     doc["_id"] = res.inserted_id
+    await notify_admins_pending_product(str(res.inserted_id), doc.get("title", ""))
     return _to_response(doc)
 
 
@@ -480,6 +508,7 @@ async def create_product_with_image(
 
     res = await db.products.insert_one(doc)
     doc["_id"] = res.inserted_id
+    await notify_admins_pending_product(str(res.inserted_id), title)
     return _to_response(doc)
 
 
@@ -538,6 +567,7 @@ async def create_product_with_ai(
 
     res = await db.products.insert_one(doc)
     doc["_id"] = res.inserted_id
+    await notify_admins_pending_product(str(res.inserted_id), doc.get("title", ""))
     return _to_response(doc)
 
 
@@ -651,17 +681,48 @@ async def update_product(
         raise HTTPException(status_code=403, detail="You can only update your own products")
 
     now = datetime.utcnow()
+    prev_status = existing.get("status")
+    old_images = existing.get("images", []) if isinstance(existing.get("images"), list) else []
+
+    # Snapshot last live listing so admin can reject an edit without delisting (restore this state).
+    if prev_status in (ProductStatus.AVAILABLE.value, ProductStatus.RESERVED.value):
+        pending_edit_snapshot = {
+            "title": existing.get("title"),
+            "description": existing.get("description"),
+            "price": existing.get("price"),
+            "category": existing.get("category"),
+            "condition": existing.get("condition"),
+            "sustainable": bool(existing.get("sustainable", False)),
+            "images": list(old_images),
+            "thumb_url": existing.get("thumb_url"),
+            "status": prev_status,
+        }
+    elif prev_status == ProductStatus.PENDING.value and existing.get("pending_edit_snapshot"):
+        pending_edit_snapshot = existing["pending_edit_snapshot"]
+    else:
+        pending_edit_snapshot = None
+
     old_price = existing.get("price")
     update_data = {**payload.model_dump(), "updated_at": now, "status": ProductStatus.PENDING.value}
     new_price = update_data.get("price")
-    old_images = existing.get("images", []) if isinstance(existing.get("images"), list) else []
     new_images = update_data.get("images", []) if isinstance(update_data.get("images"), list) else []
     removed_images = [u for u in old_images if u not in new_images]
     for image_url in removed_images:
         await delete_image(image_url)
-    await db.products.update_one(
-        {"_id": pid},
-        {"$set": update_data}
+
+    set_payload = {**update_data}
+    if pending_edit_snapshot is not None:
+        set_payload["pending_edit_snapshot"] = pending_edit_snapshot
+        await db.products.update_one({"_id": pid}, {"$set": set_payload})
+    else:
+        await db.products.update_one(
+            {"_id": pid},
+            {"$set": set_payload, "$unset": {"pending_edit_snapshot": ""}},
+        )
+
+    await notify_admins_pending_product(
+        id,
+        update_data.get("title") or existing.get("title", ""),
     )
 
     # Price-drop alert: notify users who favorited this product (exclude seller)

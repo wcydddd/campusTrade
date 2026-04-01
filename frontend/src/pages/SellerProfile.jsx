@@ -9,6 +9,74 @@ import campusTradeLogo from "../assets/uol-secondhand-logo.png";
 import "./Home.css";
 import "./SellerProfile.css";
 
+function SpReviewStars({ value, size = 18 }) {
+  const rounded = Math.round(Number(value) || 0);
+  return (
+    <div className="sp-review-avg-stars" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <svg key={s} width={size} height={size} viewBox="0 0 24 24" fill={s <= rounded ? "#fbbf24" : "none"} stroke="#fbbf24" strokeWidth="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+function SpReviewSection({ title, description, roleShort, summary, items }) {
+  const n = summary?.total_reviews ?? 0;
+  const avg = n > 0 ? Number(summary.avg_rating) : 0;
+  return (
+    <section className="sp-review-rep-section">
+      <h3 className="sp-review-rep-heading">{title}</h3>
+      {description ? <p className="sp-review-rep-desc">{description}</p> : null}
+      {n > 0 ? (
+        <div className="sp-review-summary sp-review-summary--compact">
+          <div className="sp-review-avg sp-review-avg--row">
+            <span className="sp-review-avg-num sp-review-avg-num--sm">{avg.toFixed(1)}</span>
+            <div>
+              <SpReviewStars value={avg} size={16} />
+              <span className="sp-review-count">
+                {n} review{n !== 1 ? "s" : ""} as {roleShort}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="sp-review-rep-empty">No reviews in this role yet.</p>
+      )}
+      {items?.length ? (
+        <div className="sp-review-list sp-review-list--tight">
+          {items.map((r) => (
+            <div key={r.id} className="sp-review-card">
+              <div className="sp-review-header">
+                <div className="sp-review-user">
+                  <div className="sp-review-avatar">{(r.reviewer_username || "U")[0].toUpperCase()}</div>
+                  <div>
+                    <p className="sp-review-username">{r.reviewer_username || "User"}</p>
+                    <div className="sp-review-stars-sm">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={s <= r.rating ? "#fbbf24" : "none"} stroke="#fbbf24" strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <span className="sp-review-date">
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                </span>
+              </div>
+              <p className="sp-review-comment">
+                {r.comment || <em className="sp-review-nocomment">No comment</em>}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function resolveMediaUrl(url) {
   if (!url || typeof url !== "string") return "";
   if (url.startsWith("http") || url.startsWith("data:")) return url;
@@ -59,12 +127,12 @@ export default function SellerProfile() {
 
         const sellerData = await sellerRes.json();
         const list = await productsRes.json();
-        const repData = await repRes.json().catch(() => null);
+        const repData = repRes.ok ? await repRes.json().catch(() => null) : null;
         if (cancelled) return;
 
         setSeller(sellerData);
         setProducts(Array.isArray(list) ? list : []);
-        setRep(repData && repData.summary ? repData : null);
+        setRep(repData && repData.as_seller && repData.as_buyer ? repData : null);
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load seller profile");
       } finally {
@@ -155,6 +223,10 @@ export default function SellerProfile() {
 
   const totalViews = products.reduce((sum, p) => sum + (p.views ?? 0), 0);
 
+  const sellerSummary = rep?.as_seller?.summary;
+  const buyerSummary = rep?.as_buyer?.summary;
+  const totalReviewCount = (sellerSummary?.total_reviews ?? 0) + (buyerSummary?.total_reviews ?? 0);
+
   return (
     <div className="sp-page">
       {/* ====== Platform-wide Yellow Navigation Bar ====== */}
@@ -229,7 +301,7 @@ export default function SellerProfile() {
                     ) : (
                       <span className="user-chip-avatar user-chip-avatar-fallback">{userLabel?.[0]?.toUpperCase() || "M"}</span>
                     )}
-                    <span>{userLabel}</span>
+                    <span className="ct-account-name" title={userLabel}>{userLabel}</span>
                     <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>▼</span>
                   </button>
                   {meMenuOpen && (
@@ -296,13 +368,24 @@ export default function SellerProfile() {
           </div>
           <div className="sp-stat-divider" />
           <div className="sp-stat">
-            <span className="sp-stat-value">{rep?.summary ? rep.summary.total_reviews : 0}</span>
+            <span className="sp-stat-value">{totalReviewCount}</span>
             <span className="sp-stat-label">Reviews</span>
           </div>
           <div className="sp-stat-divider" />
           <div className="sp-stat">
-            <span className="sp-stat-value">{rep?.summary ? rep.summary.avg_rating.toFixed(1) : "—"}</span>
-            <span className="sp-stat-label">Rating</span>
+            <span className="sp-stat-value">
+              {sellerSummary && sellerSummary.total_reviews > 0 ? sellerSummary.avg_rating.toFixed(1) : "—"}
+            </span>
+            <span className="sp-stat-label">As seller</span>
+            <span className="sp-stat-sublabel">{sellerSummary?.total_reviews ?? 0} received</span>
+          </div>
+          <div className="sp-stat-divider" />
+          <div className="sp-stat">
+            <span className="sp-stat-value">
+              {buyerSummary && buyerSummary.total_reviews > 0 ? buyerSummary.avg_rating.toFixed(1) : "—"}
+            </span>
+            <span className="sp-stat-label">As buyer</span>
+            <span className="sp-stat-sublabel">{buyerSummary?.total_reviews ?? 0} received</span>
           </div>
           {totalViews > 0 && (
             <>
@@ -331,7 +414,7 @@ export default function SellerProfile() {
             onClick={() => setActiveTab("reviews")}
           >
             Reviews
-            <span className="sp-tab-count">{rep?.summary ? rep.summary.total_reviews : 0}</span>
+            <span className="sp-tab-count">{totalReviewCount}</span>
           </button>
         </div>
 
@@ -359,57 +442,27 @@ export default function SellerProfile() {
 
         {/* ── Reviews Tab ── */}
         {activeTab === "reviews" && (
-          <div className="sp-tab-content">
-            {rep?.summary && (
-              <div className="sp-review-summary">
-                <div className="sp-review-avg">
-                  <span className="sp-review-avg-num">{rep.summary.avg_rating.toFixed(1)}</span>
-                  <div className="sp-review-avg-stars">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} width="18" height="18" viewBox="0 0 24 24" fill={s <= Math.round(rep.summary.avg_rating) ? "#fbbf24" : "none"} stroke="#fbbf24" strokeWidth="2">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="sp-review-count">{rep.summary.total_reviews} review{rep.summary.total_reviews !== 1 ? "s" : ""}</span>
-                </div>
-              </div>
-            )}
-
-            {rep?.items?.length ? (
-              <div className="sp-review-list">
-                {rep.items.map((r) => (
-                  <div key={r.id} className="sp-review-card">
-                    <div className="sp-review-header">
-                      <div className="sp-review-user">
-                        <div className="sp-review-avatar">{(r.reviewer_username || "U")[0].toUpperCase()}</div>
-                        <div>
-                          <p className="sp-review-username">{r.reviewer_username || "User"}</p>
-                          <div className="sp-review-stars-sm">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={s <= r.rating ? "#fbbf24" : "none"} stroke="#fbbf24" strokeWidth="2">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <span className="sp-review-date">
-                        {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
-                      </span>
-                    </div>
-                    <p className="sp-review-comment">
-                      {r.comment || <em className="sp-review-nocomment">No comment</em>}
-                    </p>
-                  </div>
-                ))}
+          <div className="sp-tab-content sp-tab-content--reviews">
+            {!rep ? (
+              <div className="sp-empty">
+                <p>Reputation could not be loaded.</p>
               </div>
             ) : (
-              <div className="sp-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="sp-empty-icon">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                <p>No reviews for this seller yet.</p>
+              <div className="sp-review-rep-split">
+                <SpReviewSection
+                  title="As seller"
+                  roleShort="seller"
+                  description="Ratings from buyers after completed orders."
+                  summary={rep.as_seller.summary}
+                  items={rep.as_seller.items}
+                />
+                <SpReviewSection
+                  title="As buyer"
+                  roleShort="buyer"
+                  description="Ratings from sellers after completed orders."
+                  summary={rep.as_buyer.summary}
+                  items={rep.as_buyer.items}
+                />
               </div>
             )}
           </div>

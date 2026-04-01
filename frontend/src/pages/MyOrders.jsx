@@ -224,15 +224,31 @@ export default function MyOrders() {
                     {/* ── Header ── */}
                     <div className="order-card-header">
                       <div className="order-card-peer">
-                        <span className="order-card-avatar" aria-hidden="true">
-                          {(tab === "buyer"
-                            ? order.seller_name
-                            : order.buyer_name
-                          )?.charAt(0)?.toUpperCase() || "?"}
-                        </span>
-                        <span className="order-card-peer-name">
-                          {tab === "buyer" ? (order.seller_name || "—") : (order.buyer_name || "—")}
-                        </span>
+                        {(() => {
+                          const peerId = tab === "buyer" ? order.seller_id : order.buyer_id;
+                          const peerName = tab === "buyer" ? (order.seller_name || "—") : (order.buyer_name || "—");
+                          const initial = (tab === "buyer" ? order.seller_name : order.buyer_name)?.charAt(0)?.toUpperCase() || "?";
+                          const title = tab === "buyer" ? "View seller profile" : "View buyer profile";
+                          if (peerId) {
+                            return (
+                              <Link
+                                to={`/seller/${peerId}`}
+                                className="order-card-peer-link"
+                                onClick={(e) => e.stopPropagation()}
+                                title={title}
+                              >
+                                <span className="order-card-avatar" aria-hidden="true">{initial}</span>
+                                <span className="order-card-peer-name">{peerName}</span>
+                              </Link>
+                            );
+                          }
+                          return (
+                            <>
+                              <span className="order-card-avatar" aria-hidden="true">{initial}</span>
+                              <span className="order-card-peer-name">{peerName}</span>
+                            </>
+                          );
+                        })()}
                       </div>
                       <span className={`order-status ${STATUS_CLASS[order.status] || ""}`}>
                         {STATUS_LABEL[order.status] || order.status}

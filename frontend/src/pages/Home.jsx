@@ -355,7 +355,7 @@ function Home() {
                     }}
                   >
                     <UserAvatar avatarUrl={userAvatarUrl} label={userLabel} />
-                    <span>{userLabel}</span>
+                    <span className="ct-account-name" title={userLabel}>{userLabel}</span>
                     <span className={`me-arrow ${meMenuOpen ? "me-arrow-open" : ""}`}>
                       ▼
                     </span>

@@ -5,6 +5,29 @@ import "./AdminUsers.css";
 
 const PAGE_SIZE = 10;
 
+const SearchIcon = () => (
+  <svg className="au-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+function resolveMediaUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
+}
+
+function productStatusTagClass(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "available") return "au-tag au-tag--available";
+  if (s === "sold") return "au-tag au-tag--sold";
+  if (s === "pending") return "au-tag au-tag--pending";
+  if (s === "removed" || s === "rejected") return "au-tag au-tag--removed";
+  if (s === "reserved") return "au-tag au-tag--reserved";
+  return "au-tag au-tag--user";
+}
+
 export default function AdminProducts() {
   const [data, setData] = useState({ items: [], total: 0, page: 1, size: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
@@ -73,38 +96,39 @@ export default function AdminProducts() {
     }
   }
 
-  const statusColor = (s) => {
-    if (s === "removed") return { background: "#fef2f2", color: "#b91c1c" };
-    if (s === "rejected") return { background: "#fef2f2", color: "#b91c1c" };
-    if (s === "available") return { background: "#f0fdf4", color: "#15803d" };
-    if (s === "pending") return { background: "#fffbeb", color: "#b45309" };
-    if (s === "sold") return { background: "#f1f5f9", color: "#64748b" };
-    return {};
-  };
-
   return (
-    <div className="admin-users">
-      <div className="admin-users-header">
-        <h1>Product Management</h1>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Link to="/admin/review" className="admin-users-back">Review</Link>
-          <Link to="/admin/users" className="admin-users-back">Users</Link>
-          <Link to="/admin/reports" className="admin-users-back">Reports</Link>
-          <Link to="/home" className="admin-users-back">Home</Link>
+    <div className="au-page">
+      <div className="au-header">
+        <h1 className="au-title">Product Management</h1>
+        <div className="au-nav">
+          <Link to="/admin/review" className="au-nav-link">Review</Link>
+          <Link to="/admin/users" className="au-nav-link">Users</Link>
+          <Link to="/admin/reports" className="au-nav-link">Reports</Link>
+          <Link to="/home" className="au-nav-link">Home</Link>
         </div>
       </div>
 
-      <div className="admin-users-toolbar">
-        <input
-          type="text"
-          placeholder="Search by title"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput)}
-        />
-        <button type="button" onClick={() => setSearch(searchInput)}>Search</button>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}>
+      <div className="au-search-row">
+        <div className="au-search">
+          <div className="au-search-wrap">
+            <SearchIcon />
+            <input
+              className="au-search-input"
+              type="text"
+              placeholder="Search by title"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput)}
+            />
+          </div>
+          <button type="button" className="au-search-btn" onClick={() => setSearch(searchInput)}>Search</button>
+        </div>
+        <select
+          className="au-role-select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by status"
+        >
           <option value="">All statuses</option>
           <option value="pending">Pending review</option>
           <option value="available">Available</option>
@@ -115,17 +139,18 @@ export default function AdminProducts() {
         </select>
       </div>
 
-      {error && <p className="admin-users-error">{error}</p>}
-      {loading && <p className="admin-users-msg">Loading...</p>}
+      {error && <p className="au-error">{error}</p>}
+      {loading && <p className="au-loading">Loading...</p>}
 
       {!loading && (
         <>
-          <p className="admin-users-meta">{data.total} total, page {data.page} / {totalPages}</p>
-          <div className="admin-users-table-wrap">
-            <table className="admin-users-table">
+          <div className="au-table-card">
+            <p className="au-table-meta">{data.total} total, page {data.page} / {totalPages}</p>
+            <table className="au-table">
               <thead>
                 <tr>
-                  <th>Title</th>
+                  <th>Image</th>
+                  <th>Product</th>
                   <th>Seller</th>
                   <th>Price</th>
                   <th>Category</th>
@@ -135,38 +160,85 @@ export default function AdminProducts() {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((p) => (
-                  <tr key={p.id}>
-                    <td><Link to={`/products/${p.id}`} style={{ color: "#4f46e5" }}>{p.title}</Link></td>
-                    <td>{p.seller_username || p.seller_id}</td>
-                    <td>£{p.price}</td>
-                    <td>{p.category}</td>
-                    <td>
-                      <span style={{
-                        display: "inline-block", padding: "2px 10px", borderRadius: 999,
-                        fontSize: 12, fontWeight: 600, ...statusColor(p.status),
-                      }}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td>{p.report_count > 0 ? <span style={{ color: "#ef4444", fontWeight: 600 }}>{p.report_count}</span> : 0}</td>
-                    <td className="admin-users-actions">
-                      {p.status !== "removed" ? (
-                        <button type="button" className="btn-ban" disabled={actionLoading === p.id}
-                          onClick={() => handleTakedown(p.id)}>Takedown</button>
-                      ) : (
-                        <button type="button" className="btn-unban" disabled={actionLoading === p.id}
-                          onClick={() => handleRestore(p.id)}>Restore</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {data.items.map((p) => {
+                  const thumbSrc = resolveMediaUrl(p.thumb_url);
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        {thumbSrc ? (
+                          <img
+                            className="au-product-thumb"
+                            src={thumbSrc}
+                            alt=""
+                            onError={(e) => {
+                              e.currentTarget.replaceWith(
+                                Object.assign(document.createElement("span"), {
+                                  className: "au-product-thumb--placeholder",
+                                  textContent: "—",
+                                }),
+                              );
+                            }}
+                          />
+                        ) : (
+                          <span className="au-product-thumb--placeholder">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <Link to={`/products/${p.id}`} className="au-cell-link">{p.title}</Link>
+                      </td>
+                      <td>{p.seller_username || p.seller_id}</td>
+                      <td>£{p.price}</td>
+                      <td>{p.category || "—"}</td>
+                      <td>
+                        <span className={productStatusTagClass(p.status)}>{p.status}</span>
+                      </td>
+                      <td>
+                        <span className="au-status">
+                          {p.report_count > 0 ? (
+                            <>
+                              <span className="au-status-dot au-status-dot--red" />
+                              <span className="au-status-text--red">{p.report_count}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="au-status-dot au-status-dot--gray" />
+                              <span className="au-status-text--gray">0</span>
+                            </>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="au-actions">
+                          {p.status !== "removed" ? (
+                            <button
+                              type="button"
+                              className="au-btn-ban"
+                              disabled={actionLoading === p.id}
+                              onClick={() => handleTakedown(p.id)}
+                            >
+                              Takedown
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="au-btn-verify"
+                              disabled={actionLoading === p.id}
+                              onClick={() => handleRestore(p.id)}
+                            >
+                              Restore
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            {data.items.length === 0 && <p className="au-empty">No products found.</p>}
           </div>
-          {data.items.length === 0 && <p className="admin-users-msg">No products found.</p>}
 
-          <div className="admin-users-pagination">
+          <div className="au-pagination">
             <button type="button" disabled={data.page <= 1} onClick={() => fetchProducts(data.page - 1, search, statusFilter)}>Previous</button>
             <span>{data.page} / {totalPages}</span>
             <button type="button" disabled={data.page >= totalPages} onClick={() => fetchProducts(data.page + 1, search, statusFilter)}>Next</button>

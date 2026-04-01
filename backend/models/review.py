@@ -19,6 +19,10 @@ class ReviewResponse(BaseModel):
     created_at: datetime
 
     reviewer_username: Optional[str] = None
+    reviewee_role: Optional[str] = Field(
+        default=None,
+        description="Reviewee's role in the order: seller (rated by buyer) or buyer (rated by seller).",
+    )
 
     class Config:
         from_attributes = True
@@ -30,7 +34,14 @@ class UserReputationSummary(BaseModel):
     total_reviews: int
 
 
-class UserReviewsResponse(BaseModel):
+class UserReputationSection(BaseModel):
     summary: UserReputationSummary
     items: list[ReviewResponse]
+
+
+class UserReviewsByRoleResponse(BaseModel):
+    """同一用户作为卖家收到的评价 vs 作为买家收到的评价（分开展示）。"""
+    user_id: str
+    as_seller: UserReputationSection
+    as_buyer: UserReputationSection
 

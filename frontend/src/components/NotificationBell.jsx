@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE, authFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -10,6 +10,11 @@ const ICON_LABELS = {
   new_favorite: "New favorite",
   price_drop: "Price drop",
   system: "System",
+  product_review: "Listing update",
+  product_takedown: "Listing taken down",
+  product_restored: "Listing restored",
+  admin_review: "Admin: review queue",
+  admin_report: "Admin: report",
 };
 
 const ICON_EMOJI = {
@@ -18,7 +23,15 @@ const ICON_EMOJI = {
   new_favorite: "\u2764\uFE0F",
   price_drop: "\u{1F4B0}",
   system: "\u{1F514}",
+  product_review: "\u2705",
+  product_takedown: "\u{1F6AB}",
+  product_restored: "\u{1F504}",
+  admin_review: "\u{1F4CB}",
+  admin_report: "\u{1F6A8}",
 };
+
+/** Chat alerts use Messages badge only; exclude from bell count & list (legacy rows may still exist in DB). */
+const BELL_EXCLUDE_TYPES = new Set(["new_order"]);
 
 export default function NotificationBell({ variant = "default" }) {
   const navigate = useNavigate();
@@ -27,28 +40,39 @@ export default function NotificationBell({ variant = "default" }) {
 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef(null);
 
-  // ── Fetch unread count and notification list on mount (keep history so list is not empty after return) ──
+  const bellBadgeCount = useMemo(
+    () => items.filter((i) => !i.read && !BELL_EXCLUDE_TYPES.has(i.type)).length,
+    [items],
+  );
+
+  const visibleItems = useMemo(
+    () => items.filter((i) => !BELL_EXCLUDE_TYPES.has(i.type)),
+    [items],
+  );
+
+  const refreshItems = useCallback(async () => {
+    try {
+      const listRes = await authFetch(`${API_BASE}/notifications?limit=50`);
+      if (listRes.ok) {
+        const data = await listRes.json();
+        setItems(Array.isArray(data) ? data : []);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // ── Fetch list on mount ──
   useEffect(() => {
     if (!isAuthenticated) {
-      setUnread(0);
       setItems([]);
       return;
     }
     let c = false;
     (async () => {
       try {
-        const [countRes, listRes] = await Promise.all([
-          authFetch(`${API_BASE}/notifications/unread-count`),
-          authFetch(`${API_BASE}/notifications?limit=50`),
-        ]);
-        if (!c && countRes.ok) {
-          const d = await countRes.json();
-          setUnread(d.unread_count ?? 0);
-        }
+        const listRes = await authFetch(`${API_BASE}/notifications?limit=50`);
         if (!c && listRes.ok) {
           const data = await listRes.json();
           setItems(Array.isArray(data) ? data : []);
@@ -58,22 +82,23 @@ export default function NotificationBell({ variant = "default" }) {
     return () => { c = true; };
   }, [isAuthenticated]);
 
-  // ── Sync: update badge when a conversation is viewed in Messages (via Chat page event) ──
+  // ── e.g. Chat read-by-link marks rows read — refresh list so bell count stays right ──
   useEffect(() => {
-    const handler = (e) => {
-      if (typeof e.detail?.total_unread === "number") setUnread(e.detail.total_unread);
+    const handler = () => {
+      refreshItems();
     };
     window.addEventListener("notifications:unread_update", handler);
     return () => window.removeEventListener("notifications:unread_update", handler);
-  }, []);
+  }, [refreshItems]);
 
-  // ── Real-time push from WebSocket ──
+  // ── Real-time push from WebSocket (skip chat duplicates) ──
   useEffect(() => {
     if (!lastMessage || lastMessage.type !== "notification") return;
-    setUnread(lastMessage.notification_unread ?? ((p) => p + 1));
-    setItems((prev) => {
-      const n = lastMessage.notification;
-      return [
+    const n = lastMessage.notification;
+    if (!n || BELL_EXCLUDE_TYPES.has(n.ntype)) return;
+
+    setItems((prev) =>
+      [
         {
           id: n.id,
           type: n.ntype,
@@ -84,8 +109,8 @@ export default function NotificationBell({ variant = "default" }) {
           created_at: n.created_at,
         },
         ...prev,
-      ].slice(0, 50);
-    });
+      ].slice(0, 50),
+    );
   }, [lastMessage]);
 
   // ── Fetch list when panel opens (all notifications, read + unread, so history is kept) ──
@@ -95,7 +120,7 @@ export default function NotificationBell({ variant = "default" }) {
       const r = await authFetch(`${API_BASE}/notifications?limit=50`);
       if (r.ok) {
         const data = await r.json();
-        setItems(data);
+        setItems(Array.isArray(data) ? data : []);
       }
     } catch { /* ignore */ }
     setLoading(false);
@@ -125,7 +150,9 @@ export default function NotificationBell({ variant = "default" }) {
         const r = await authFetch(`${API_BASE}/notifications/${item.id}/read`, { method: "POST" });
         if (r.ok) {
           const d = await r.json();
-          setUnread(d.total_unread ?? Math.max(0, unread - 1));
+          if (typeof d.total_unread === "number") {
+            window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: d.total_unread } }));
+          }
           setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read: true } : i)));
         }
       } catch { /* ignore */ }
@@ -139,7 +166,8 @@ export default function NotificationBell({ variant = "default" }) {
     try {
       const r = await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
       if (r.ok) {
-        setUnread(0);
+        const d = await r.json().catch(() => ({}));
+        window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: d.total_unread ?? 0 } }));
         setItems((prev) => prev.map((i) => ({ ...i, read: true })));
       }
     } catch { /* ignore */ }
@@ -149,10 +177,13 @@ export default function NotificationBell({ variant = "default" }) {
   const handleClearAll = async (e) => {
     e.stopPropagation();
     try {
-      await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+      const r = await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+      if (r.ok) {
+        const d = await r.json().catch(() => ({}));
+        window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: d.total_unread ?? 0 } }));
+      }
     } catch { /* ignore */ }
     setItems([]);
-    setUnread(0);
   };
 
   if (!isAuthenticated) return null;
@@ -219,7 +250,7 @@ export default function NotificationBell({ variant = "default" }) {
         type="button"
         onClick={toggle}
         aria-label="Notifications"
-        title={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
+        title={bellBadgeCount > 0 ? `Notifications (${bellBadgeCount} unread)` : "Notifications"}
         style={buttonStyle}
         onMouseEnter={(e) => {
           if (isUtility) {
@@ -261,7 +292,7 @@ export default function NotificationBell({ variant = "default" }) {
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         <span>Notifications</span>
-        {unread > 0 && (
+        {bellBadgeCount > 0 && (
           <span
             style={{
               position: "absolute",
@@ -281,7 +312,7 @@ export default function NotificationBell({ variant = "default" }) {
               border: "2px solid #fff",
             }}
           >
-            {unread > 99 ? "99+" : unread}
+            {bellBadgeCount > 99 ? "99+" : bellBadgeCount}
           </span>
         )}
       </button>
@@ -316,7 +347,7 @@ export default function NotificationBell({ variant = "default" }) {
               Notifications
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {unread > 0 && (
+              {bellBadgeCount > 0 && (
                 <button
                   onClick={handleReadAll}
                   style={{
@@ -368,13 +399,13 @@ export default function NotificationBell({ variant = "default" }) {
             </p>
           )}
 
-          {!loading && items.length === 0 && (
+          {!loading && visibleItems.length === 0 && (
             <p style={{ padding: 30, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
               No notifications yet.
             </p>
           )}
 
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <div
               key={item.id}
               onClick={() => handleClick(item)}

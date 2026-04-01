@@ -7,6 +7,7 @@ from bson import ObjectId
 from utils.database import get_database
 from utils.security import get_current_admin_user
 from models.report import ReportResponse, ResolveBody
+from models.product import ProductStatus
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -196,6 +197,7 @@ class ProductListItem(BaseModel):
     category: str
     report_count: int = 0
     created_at: Optional[str] = None
+    thumb_url: Optional[str] = None
 
 
 class ProductListResponse(BaseModel):
@@ -245,6 +247,17 @@ async def list_products_admin(
         async for r in db.reports.aggregate(pipeline):
             report_counts[r["_id"]] = r["count"]
 
+    def _first_image_url(doc: dict) -> Optional[str]:
+        imgs = doc.get("images") or []
+        if not imgs:
+            return None
+        first = imgs[0]
+        if isinstance(first, str):
+            return first
+        if isinstance(first, dict) and isinstance(first.get("url"), str):
+            return first["url"]
+        return None
+
     items = [
         ProductListItem(
             id=str(d["_id"]),
@@ -256,6 +269,7 @@ async def list_products_admin(
             category=d.get("category", ""),
             report_count=report_counts.get(d["_id"], 0),
             created_at=str(d["created_at"]) if d.get("created_at") else None,
+            thumb_url=_first_image_url(d),
         )
         for d in docs
     ]
@@ -292,6 +306,27 @@ async def takedown_product(
             "removed_at": datetime.now(timezone.utc),
         }},
     )
+
+    seller_id = product.get("seller_id")
+    if seller_id:
+        from routes.notifications import create_notification
+
+        ptitle = (product.get("title") or "Your listing").strip() or "Your listing"
+        body_text = f'Your listing "{ptitle}" was removed by an administrator.'
+        if reason:
+            body_text += f" Reason: {reason}"
+        try:
+            await create_notification(
+                str(seller_id),
+                "product_takedown",
+                "Listing taken down",
+                body_text,
+                link="/my-products",
+                meta={"product_id": str(pid)},
+            )
+        except Exception:
+            pass
+
     return {"ok": True, "message": "Product taken down"}
 
 
@@ -321,6 +356,28 @@ async def restore_product(
             "$unset": {"removed_reason": "", "removed_by": "", "removed_at": "", "previous_status": ""},
         },
     )
+
+    seller_id = product.get("seller_id")
+    if seller_id:
+        from routes.notifications import create_notification
+
+        ptitle = (product.get("title") or "Your listing").strip() or "Your listing"
+        body_text = (
+            f'Your listing "{ptitle}" was restored by an administrator '
+            f"and is visible again with status: {prev}."
+        )
+        try:
+            await create_notification(
+                str(seller_id),
+                "product_restored",
+                "Listing restored",
+                body_text,
+                link=f"/products/{product_id}",
+                meta={"product_id": str(pid), "status": str(prev)},
+            )
+        except Exception:
+            pass
+
     return {"ok": True, "message": f"Product restored to '{prev}'"}
 
 
@@ -411,16 +468,36 @@ async def resolve_report(
         if pid:
             product = await db.products.find_one({"_id": pid})
             if product and product.get("status") != "removed":
+                removed_reason = body.admin_note or f"Reported: {report.get('reason', '')}"
                 await db.products.update_one(
                     {"_id": pid},
                     {"$set": {
                         "status": "removed",
                         "previous_status": product.get("status", "available"),
-                        "removed_reason": body.admin_note or f"Reported: {report.get('reason', '')}",
+                        "removed_reason": removed_reason,
                         "removed_by": current_user["user_id"],
                         "removed_at": now,
                     }},
                 )
+                seller_id = product.get("seller_id")
+                if seller_id:
+                    from routes.notifications import create_notification
+
+                    ptitle = (product.get("title") or "Your listing").strip() or "Your listing"
+                    body_text = f'Your listing "{ptitle}" was removed after a user report was reviewed.'
+                    if removed_reason:
+                        body_text += f" Note: {removed_reason}"
+                    try:
+                        await create_notification(
+                            str(seller_id),
+                            "product_takedown",
+                            "Listing taken down",
+                            body_text,
+                            link="/my-products",
+                            meta={"product_id": str(pid), "report_id": str(rid)},
+                        )
+                    except Exception:
+                        pass
 
     await db.reports.update_one(
         {"_id": rid},
@@ -506,32 +583,80 @@ async def review_product(
     seller_id = str(product["seller_id"])
     product_title = product.get("title", "Untitled")
 
+    snap = product.get("pending_edit_snapshot")
+
     if body.action == "approve":
+        # After edit review, return to the same trade state (available / reserved) as before the edit.
+        final_status = ProductStatus.AVAILABLE.value
+        if isinstance(snap, dict) and snap.get("status") in (
+            ProductStatus.AVAILABLE.value,
+            ProductStatus.RESERVED.value,
+        ):
+            final_status = snap["status"]
         await db.products.update_one(
             {"_id": pid},
-            {"$set": {
-                "status": "available",
-                "reviewed_by": current_user["user_id"],
-                "reviewed_at": now,
-            }},
+            {
+                "$set": {
+                    "status": final_status,
+                    "reviewed_by": current_user["user_id"],
+                    "reviewed_at": now,
+                },
+                "$unset": {"pending_edit_snapshot": "", "reject_reason": ""},
+            },
         )
         notif_title = "Product Approved"
         notif_body = f'Your product "{product_title}" has been approved and is now listed!'
         notif_link = f"/products/{product_id}"
     else:
         reason = body.reason or "Does not meet listing requirements"
-        await db.products.update_one(
-            {"_id": pid},
-            {"$set": {
-                "status": "rejected",
-                "reviewed_by": current_user["user_id"],
-                "reviewed_at": now,
-                "reject_reason": reason,
-            }},
-        )
-        notif_title = "Product Rejected"
-        notif_body = f'Your product "{product_title}" was rejected. Reason: {reason}'
-        notif_link = f"/my-products"
+        # Rejecting an edit to an already-live listing: restore snapshot, keep item on sale.
+        if isinstance(snap, dict) and snap.get("status") in (
+            ProductStatus.AVAILABLE.value,
+            ProductStatus.RESERVED.value,
+        ):
+            restore_title = snap.get("title") or product_title
+            await db.products.update_one(
+                {"_id": pid},
+                {
+                    "$set": {
+                        "title": snap.get("title"),
+                        "description": snap.get("description"),
+                        "price": snap.get("price"),
+                        "category": snap.get("category"),
+                        "condition": snap.get("condition"),
+                        "sustainable": bool(snap.get("sustainable", False)),
+                        "images": snap.get("images")
+                        if isinstance(snap.get("images"), list)
+                        else [],
+                        "thumb_url": snap.get("thumb_url"),
+                        "status": snap.get("status", ProductStatus.AVAILABLE.value),
+                        "updated_at": now,
+                        "reviewed_by": current_user["user_id"],
+                        "reviewed_at": now,
+                    },
+                    "$unset": {"pending_edit_snapshot": "", "reject_reason": ""},
+                },
+            )
+            notif_title = "Listing edit not approved"
+            notif_body = (
+                f'Your changes to "{restore_title}" were not approved. '
+                f"The listing was restored to what buyers saw before your edit. Reason: {reason}"
+            )
+            notif_link = f"/products/{product_id}"
+        else:
+            # First submission rejected — listing never went live
+            await db.products.update_one(
+                {"_id": pid},
+                {"$set": {
+                    "status": "rejected",
+                    "reviewed_by": current_user["user_id"],
+                    "reviewed_at": now,
+                    "reject_reason": reason,
+                }},
+            )
+            notif_title = "Product Rejected"
+            notif_body = f'Your product "{product_title}" was rejected. Reason: {reason}'
+            notif_link = f"/my-products"
 
     from routes.notifications import create_notification
     try:
