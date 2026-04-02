@@ -173,17 +173,17 @@ export default function NotificationBell({ variant = "default" }) {
     } catch { /* ignore */ }
   };
 
-  // ── Clear all notifications ──
+  // ── Clear all notifications (delete server-side; avoid unread_update → refreshItems race that repopulated the list) ──
   const handleClearAll = async (e) => {
     e.stopPropagation();
     try {
-      const r = await authFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+      const r = await authFetch(`${API_BASE}/notifications/clear-all`, { method: "POST" });
       if (r.ok) {
         const d = await r.json().catch(() => ({}));
+        setItems([]);
         window.dispatchEvent(new CustomEvent("notifications:unread_update", { detail: { total_unread: d.total_unread ?? 0 } }));
       }
     } catch { /* ignore */ }
-    setItems([]);
   };
 
   if (!isAuthenticated) return null;

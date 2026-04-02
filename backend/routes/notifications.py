@@ -167,6 +167,22 @@ async def mark_all_read(
 
 
 # =====================================================
+# POST /notifications/clear-all — delete all for current user
+# =====================================================
+
+
+@router.post("/clear-all")
+async def clear_all_notifications(
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove every notification for this user (inbox empty). Distinct from read-all."""
+    db = get_database()
+    uid = _oid(current_user["user_id"])
+    await db.notifications.delete_many({"user_id": uid})
+    return {"ok": True, "total_unread": 0}
+
+
+# =====================================================
 # Helper: create + push a notification (used by other modules)
 # =====================================================
 
