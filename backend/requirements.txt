@@ -7,7 +7,8 @@ pydantic-settings>=2.0
 python-dotenv>=1.0
 motor>=3.0
 pymongo>=4.0
-passlib[bcrypt]>=1.7
+# bcrypt>=4.1 breaks passlib 1.7.x (__about__ removed); pin both explicitly
+passlib==1.7.4
 bcrypt==4.0.1
 python-jose[cryptography]>=3.3
 openai>=1.0
