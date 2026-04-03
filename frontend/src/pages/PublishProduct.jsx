@@ -358,7 +358,12 @@ export default function PublishProduct() {
       } else {
         applyAiData(payload);
         setAiMessage(
-          'Preview complete! AI results have been filled into the form. The image was not saved — use "AI Smart Publish" to include it.'
+          <span className="block min-w-0">
+            <span className="font-semibold text-red-600">The image was not saved.</span>{" "}
+            If you are satisfied with the AI preview results, please use{" "}
+            <span className="font-semibold text-emerald-900">&quot;AI Smart Publish&quot;</span> to save the
+            image, or manually add images below.
+          </span>
         );
       }
 
@@ -692,7 +697,7 @@ export default function PublishProduct() {
                   clipRule="evenodd"
                 />
               </svg>
-              {aiMessage}
+              <span className="min-w-0 flex-1">{aiMessage}</span>
             </div>
           )}
 
