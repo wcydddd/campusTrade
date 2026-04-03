@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     # Some cloud hosts have broken IPv6 egress; Gmail then raises Errno 101 (network unreachable).
     smtp_force_ipv4: bool = False
+    # Use implicit TLS on port 465 (Gmail). Some hosts block or throttle 587 STARTTLS but allow 465.
+    smtp_use_ssl: bool = False
+    smtp_timeout_seconds: int = 45
     
     # Frontend URL (used in password-reset emails)
     frontend_url: str = "http://localhost:5173"
