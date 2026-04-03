@@ -4,6 +4,9 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+import httpx
+
 from config import settings
 
 
@@ -102,6 +105,43 @@ def _send_smtp(to_email: str, subject: str, body: str, html: bool = False):
             pass
 
 
+async def _send_resend(
+    to_email: str, subject: str, *, text: str | None = None, html: str | None = None
+) -> None:
+    """Send via Resend REST API (port 443; works where outbound SMTP is blocked)."""
+    if not settings.resend_api_key:
+        raise ValueError("RESEND_API_KEY is not set.")
+    if not text and not html:
+        raise ValueError("Email body required (text or html).")
+
+    payload: dict = {
+        "from": settings.resend_from,
+        "to": [to_email],
+        "subject": subject,
+    }
+    if text is not None:
+        payload["text"] = text
+    if html is not None:
+        payload["html"] = html
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+
+    if r.status_code >= 400:
+        try:
+            detail = r.json()
+        except Exception:
+            detail = r.text
+        raise Exception(f"Resend API error {r.status_code}: {detail}")
+
+
 async def send_verification_code(email: str, code: str):
     """Send a 6-digit email verification code."""
     subject = "CampusTrade - Email Verification Code"
@@ -113,9 +153,12 @@ async def send_verification_code(email: str, code: str):
         f"Best,\nCampusTrade Team"
     )
 
-    loop = asyncio.get_event_loop()
     try:
-        await loop.run_in_executor(None, _send_smtp, email, subject, body)
+        if settings.resend_api_key:
+            await _send_resend(email, subject, text=body)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _send_smtp, email, subject, body)
     except Exception as e:
         raise Exception(f"Failed to send email: {str(e)}")
 
@@ -165,8 +208,11 @@ async def send_password_reset_email(email: str, reset_link: str):
 </body>
 </html>"""
 
-    loop = asyncio.get_event_loop()
     try:
-        await loop.run_in_executor(None, _send_smtp, email, subject, html_body, True)
+        if settings.resend_api_key:
+            await _send_resend(email, subject, html=html_body)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _send_smtp, email, subject, html_body, True)
     except Exception as e:
         raise Exception(f"Failed to send password reset email: {str(e)}")

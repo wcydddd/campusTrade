@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # Use implicit TLS on port 465 (Gmail). Some hosts block or throttle 587 STARTTLS but allow 465.
     smtp_use_ssl: bool = False
     smtp_timeout_seconds: int = 45
+
+    # Resend (HTTPS) — works on Railway Hobby; see https://resend.com/docs
+    resend_api_key: str = ""
+    # Example after domain verify: "CampusTrade <noreply@yourdomain.com>"
+    # Sandbox: "onboarding@resend.dev" only sends to your Resend-account email unless domain added.
+    resend_from: str = "CampusTrade <onboarding@resend.dev>"
     
     # Frontend URL (used in password-reset emails)
     frontend_url: str = "http://localhost:5173"
