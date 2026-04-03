@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
+    # Some cloud hosts have broken IPv6 egress; Gmail then raises Errno 101 (network unreachable).
+    smtp_force_ipv4: bool = False
     
     # Frontend URL (used in password-reset emails)
     frontend_url: str = "http://localhost:5173"

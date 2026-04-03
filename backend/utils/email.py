@@ -1,12 +1,47 @@
-import smtplib
 import asyncio
+import socket
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from config import settings
 
 
+class _SMTPIPv4Only(smtplib.SMTP):
+    """SMTP client that only uses IPv4 (avoids ENETUNREACH when IPv6 egress is broken)."""
+
+    def _get_socket(self, host, port, timeout):
+        if self.debuglevel > 0:
+            self._print_debug("connect:", (host, port))
+        last_err = None
+        for res in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+            af, socktype, proto, _canon, sa = res
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+                if timeout is not None:
+                    sock.settimeout(timeout)
+                if self.source_address is not None:
+                    sock.bind(self.source_address)
+                sock.connect(sa)
+                return sock
+            except OSError as err:
+                last_err = err
+                if sock is not None:
+                    sock.close()
+        if last_err is not None:
+            raise last_err
+        raise OSError(
+            f"Could not connect to {host!r}:{port} over IPv4 (no usable A records or all attempts failed)."
+        )
+
+
 def _send_smtp(to_email: str, subject: str, body: str, html: bool = False):
     """Send email synchronously (called inside a thread pool)."""
+    if not settings.smtp_username or not settings.smtp_password:
+        raise ValueError(
+            "SMTP is not configured: set SMTP_USERNAME and SMTP_PASSWORD in the server environment."
+        )
+
     msg = MIMEMultipart("alternative")
     msg["From"] = settings.smtp_username
     msg["To"] = to_email
@@ -14,7 +49,8 @@ def _send_smtp(to_email: str, subject: str, body: str, html: bool = False):
     content_type = "html" if html else "plain"
     msg.attach(MIMEText(body, content_type))
 
-    server = smtplib.SMTP(settings.smtp_server, settings.smtp_port, timeout=15)
+    smtp_cls = _SMTPIPv4Only if settings.smtp_force_ipv4 else smtplib.SMTP
+    server = smtp_cls(settings.smtp_server, settings.smtp_port, timeout=15)
     server.starttls()
     server.login(settings.smtp_username, settings.smtp_password)
     server.sendmail(settings.smtp_username, to_email, msg.as_string())
