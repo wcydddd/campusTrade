@@ -230,7 +230,6 @@ export default function AdminUsers() {
                           onChange={(e) => handleRole(u.id, e.target.value)}
                         >
                           <option value="user">user</option>
-                          <option value="moderator">moderator</option>
                           <option value="admin">admin</option>
                         </select>
                       </div>
