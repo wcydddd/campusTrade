@@ -4,6 +4,7 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from typing import Optional
 
 import httpx
 
@@ -106,7 +107,7 @@ def _send_smtp(to_email: str, subject: str, body: str, html: bool = False):
 
 
 async def _send_resend(
-    to_email: str, subject: str, *, text: str | None = None, html: str | None = None
+    to_email: str, subject: str, *, text: Optional[str] = None, html: Optional[str] = None
 ) -> None:
     """Send via Resend REST API (port 443; works where outbound SMTP is blocked)."""
     if not settings.resend_api_key:

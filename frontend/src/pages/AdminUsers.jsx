@@ -135,8 +135,6 @@ export default function AdminUsers() {
       <div className="au-header">
         <h1 className="au-title">User Management</h1>
         <div className="au-nav">
-          <Link to="/admin/products" className="au-nav-link">Products</Link>
-          <Link to="/admin/reports" className="au-nav-link">Reports</Link>
           <Link to="/home" className="au-nav-link">Home</Link>
         </div>
       </div>

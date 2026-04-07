@@ -80,9 +80,6 @@ export default function AdminReports() {
       <div className="au-header">
         <h1 className="au-title">Report Management</h1>
         <div className="au-nav">
-          <Link to="/admin/review" className="au-nav-link">Review</Link>
-          <Link to="/admin/users" className="au-nav-link">Users</Link>
-          <Link to="/admin/products" className="au-nav-link">Products</Link>
           <Link to="/home" className="au-nav-link">Home</Link>
         </div>
       </div>

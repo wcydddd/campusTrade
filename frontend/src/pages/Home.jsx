@@ -7,6 +7,7 @@ import { useUnread } from "../context/UnreadContext";
 import NotificationBell from "../components/NotificationBell";
 import { redirectToLogin } from "../utils/authRedirect";
 import campusTradeLogo from "../assets/uol-secondhand-logo.png";
+import { ADMIN_DROPDOWN_ITEMS } from "../adminNav";
 import "./Home.css";
 
 function buildQuery(params) {
@@ -329,16 +330,13 @@ function Home() {
 
                     {adminMenuOpen && (
                       <ul className="me-dropdown-menu admin-dropdown-menu">
-                        <li>
-                          <Link to="/admin/review" onClick={() => setAdminMenuOpen(false)}>
-                            Product review
-                          </Link>
-                        </li>
-                        <li>
-                          <Link to="/admin/users" onClick={() => setAdminMenuOpen(false)}>
-                            User management
-                          </Link>
-                        </li>
+                        {ADMIN_DROPDOWN_ITEMS.map((item) => (
+                          <li key={item.to}>
+                            <Link to={item.to} onClick={() => setAdminMenuOpen(false)}>
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
                       </ul>
                     )}
                   </div>

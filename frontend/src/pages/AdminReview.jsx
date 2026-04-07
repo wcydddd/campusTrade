@@ -78,8 +78,6 @@ export default function AdminReview() {
           )}
         </div>
         <nav className="ar-nav">
-          <Link to="/admin/products" className="ar-nav-link">Products</Link>
-          <Link to="/admin/users" className="ar-nav-link">Users</Link>
           <Link to="/home" className="ar-nav-link">Home</Link>
         </nav>
       </div>
