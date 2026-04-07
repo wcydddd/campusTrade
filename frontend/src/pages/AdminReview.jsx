@@ -16,6 +16,7 @@ export default function AdminReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
+  const [thumbById, setThumbById] = useState({});
   const abortRef = useRef(null);
 
   function fetchPending(page = 1) {
@@ -38,6 +39,50 @@ export default function AdminReview() {
     fetchPending(1);
     return () => { if (abortRef.current) abortRef.current.abort(); };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (items.length === 0) return () => { cancelled = true; };
+
+    async function backfillThumbs() {
+      const missing = items.filter((p) => !thumbById[p.id]);
+      if (missing.length === 0) return;
+
+      const loaded = await Promise.all(
+        missing.map(async (p) => {
+          const inlineThumb = resolveMediaUrl(p.thumb_url || p.thumbnail_url || "");
+          if (inlineThumb) return [p.id, inlineThumb];
+
+          try {
+            const res = await authFetch(`${API_BASE}/products/${p.id}`);
+            if (!res.ok) return [p.id, ""];
+            const detail = await res.json();
+            const imageRaw =
+              detail?.thumb_url ||
+              detail?.thumbnail_url ||
+              (Array.isArray(detail?.images) && detail.images.length > 0 ? detail.images[0] : "");
+            const thumb = resolveMediaUrl(imageRaw || "");
+            return [p.id, thumb];
+          } catch {
+            return [p.id, ""];
+          }
+        }),
+      );
+
+      if (cancelled) return;
+      setThumbById((prev) => {
+        const next = { ...prev };
+        loaded.forEach(([id, thumb]) => {
+          if (thumb && !next[id]) next[id] = thumb;
+        });
+        return next;
+      });
+    }
+
+    backfillThumbs();
+    return () => { cancelled = true; };
+  }, [data.items, thumbById]);
 
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
@@ -108,9 +153,7 @@ export default function AdminReview() {
                 </thead>
                 <tbody>
                   {data.items.map((p) => {
-                    const thumb = Array.isArray(p.images) && p.images.length > 0
-                      ? resolveMediaUrl(p.images[0])
-                      : null;
+                    const thumb = thumbById[p.id] || "";
                     return (
                       <tr key={p.id}>
                         <td>
