@@ -332,6 +332,11 @@ async def _do_confirm_async(db, oid: ObjectId, uid: ObjectId) -> OrderResponse:
         {"_id": oid},
         {"$set": {"status": OrderStatus.CONFIRMED.value, "updated_at": now}},
     )
+    # 卖家确认后即从公开商品列表下架（与首页默认排除 sold 一致）；完成订单时再次写入 sold 为幂等
+    await db.products.update_one(
+        {"_id": doc["product_id"]},
+        {"$set": {"status": ProductStatus.SOLD.value, "updated_at": now}},
+    )
     updated = await db.orders.find_one({"_id": oid})
     try:
         await _notify_order_status_change(db, updated, uid, "confirm")
