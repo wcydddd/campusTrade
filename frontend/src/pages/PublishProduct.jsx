@@ -797,7 +797,7 @@ export default function PublishProduct() {
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pl-8 pr-4 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="no-spinner w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pl-8 pr-4 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
