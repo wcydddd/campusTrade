@@ -45,6 +45,13 @@ export function ChatPanel({ otherUserId, productId: urlProductId, onBack }) {
   const [resolvedProductId, setResolvedProductId] = useState(urlProductId);
   const productIdRef = useRef(urlProductId);
   const bottomRef = useRef(null);
+  const productSellerId = product?.seller_id;
+  const amISeller = productSellerId != null && String(productSellerId) === String(myId);
+  const profileLabel = amISeller ? "buyer profile" : "seller profile";
+  const openSellerProfile = useCallback(() => {
+    if (!otherUserId) return;
+    navigate(`/seller/${otherUserId}`);
+  }, [navigate, otherUserId]);
 
   useEffect(() => {
     productIdRef.current = resolvedProductId;
@@ -69,6 +76,7 @@ export function ChatPanel({ otherUserId, productId: urlProductId, onBack }) {
             title: data.title,
             price: data.price,
             image: img,
+            seller_id: data.seller_id,
           });
         }
       } catch { /* ignore */ }
@@ -271,12 +279,33 @@ export function ChatPanel({ otherUserId, productId: urlProductId, onBack }) {
             ←
           </button>
         )}
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 text-sm font-bold text-white shrink-0">
+        <button
+          type="button"
+          onClick={openSellerProfile}
+          className="group flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 text-sm font-bold text-white shrink-0 cursor-pointer border-0 transition hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2"
+          title={`View ${profileLabel}`}
+          aria-label={`Open ${otherName} ${profileLabel}`}
+        >
           {otherName?.charAt(0)?.toUpperCase() || "?"}
+        </button>
+        <div className="flex flex-1 min-w-0 flex-col">
+          <button
+            type="button"
+            onClick={openSellerProfile}
+            className="truncate text-left text-[15px] font-bold text-gray-900 cursor-pointer border-0 bg-transparent p-0 underline-offset-4 transition hover:text-yellow-600 hover:underline focus:outline-none"
+            title={`View ${profileLabel}`}
+          >
+            {otherName}
+          </button>
+          <button
+            type="button"
+            onClick={openSellerProfile}
+            className="w-fit border-0 bg-transparent p-0 text-xs text-gray-400 cursor-pointer transition hover:text-yellow-600"
+            title={`View ${profileLabel}`}
+          >
+            {`View ${profileLabel}`}
+          </button>
         </div>
-        <h2 className="flex-1 truncate text-[15px] font-bold text-gray-900">
-          {otherName}
-        </h2>
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${isConnected ? "bg-green-400" : "bg-gray-300"}`}
           title={isConnected ? "Connected" : "Disconnected"}
