@@ -1,0 +1,23 @@
+.my-products-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.my-products-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a1a1a;
+}
+
+.my-products-msg,
+.my-products-error {
+  margin: 20px 0;
+}
+
+.my-products-error {
+  color: #c00;
+}

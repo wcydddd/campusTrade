@@ -1,0 +1,146 @@
+/* src/components/ProductCard.css — Warm Orange theme */
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ede0c8;
+  box-shadow: 0 2px 8px rgba(74, 63, 53, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(242, 113, 28, 0.1);
+  border-color: #f0c8a0;
+}
+
+.product-card-sold {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+/* ---- Image ---- */
+
+.product-card-img-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.product-card-img-wrap img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  background: #f5efe6;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-card-img-wrap img {
+  transform: scale(1.03);
+}
+
+.product-card-sold-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(74, 63, 53, 0.8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Fav button */
+
+.product-card-fav {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(74, 63, 53, 0.45);
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #fff;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.product-card-fav:hover {
+  transform: scale(1.15);
+  background: rgba(74, 63, 53, 0.65);
+}
+
+.product-card-fav-active {
+  color: #ff4d4f;
+  background: rgba(74, 63, 53, 0.55);
+}
+
+/* ---- Body / Info ---- */
+
+.product-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 10px;
+}
+
+.product-card-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4A3F35;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.price {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #E05A33;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a7560;
+  background: #faf0e4;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.product-card-category {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a09080;
+}

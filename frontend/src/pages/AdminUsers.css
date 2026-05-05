@@ -1,0 +1,547 @@
+/* ============================================================
+   AdminUsers.css — Xianyu-style User Management dashboard
+   ============================================================ */
+
+.au-page {
+  min-height: 100vh;
+  padding: 28px 24px;
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  background: #fffcef;
+  background-image:
+    radial-gradient(ellipse 140% 90% at 0% -10%, rgba(255, 214, 0, 0.14), transparent 55%),
+    radial-gradient(ellipse 100% 70% at 100% 20%, rgba(255, 180, 0, 0.1), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255, 230, 120, 0.08), transparent 45%);
+}
+
+/* ---------- Header ---------- */
+.au-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.au-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.au-nav {
+  display: flex;
+  gap: 18px;
+}
+
+.au-nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.au-nav-link:hover {
+  color: #FFD600;
+}
+
+/* ---------- Search bar ---------- */
+.au-search {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-width: 480px;
+}
+
+.au-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 50px;
+  padding: 0 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.au-search-wrap:focus-within {
+  border-color: #FFD600;
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.15);
+}
+
+.au-search-icon {
+  width: 16px;
+  height: 16px;
+  color: #bbb;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.au-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #333;
+  font-family: inherit;
+}
+
+.au-search-input::placeholder {
+  color: #ccc;
+}
+
+.au-search-btn {
+  padding: 10px 22px;
+  border-radius: 50px;
+  border: none;
+  background: #FFD600;
+  color: #333;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.au-search-btn:hover {
+  background: #f5c800;
+  box-shadow: 0 2px 8px rgba(255, 214, 0, 0.3);
+}
+
+.au-search-btn:active {
+  background: #e6b800;
+}
+
+/* ---------- Messages ---------- */
+.au-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
+
+.au-loading {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.au-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* ---------- Table card ---------- */
+.au-table-card {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 20px;
+  max-width: 1100px;
+}
+
+.au-table-meta {
+  padding: 16px 24px 0;
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+.au-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Table header */
+.au-table thead th {
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #F0F0F0;
+  background: transparent;
+}
+
+/* Table rows */
+.au-table tbody tr {
+  border-bottom: 1px solid #F0F0F0;
+  transition: background 0.12s;
+}
+
+.au-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.au-table tbody tr:hover {
+  background: #FAFAFA;
+}
+
+.au-table tbody td {
+  padding: 16px 20px;
+  vertical-align: middle;
+  color: #444;
+}
+
+.au-row-banned {
+  opacity: 0.55;
+}
+
+/* ---------- Tags ---------- */
+.au-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.au-tag--admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.au-tag--moderator {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.au-tag--user {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Product status tags (admin product list) */
+.au-tag--available {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.au-tag--sold {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.au-tag--pending {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.au-tag--removed,
+.au-tag--rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.au-tag--reserved {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* ---------- Admin product list ---------- */
+
+.au-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-width: 1100px;
+}
+
+.au-search-row .au-search {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 220px;
+  max-width: 520px;
+}
+
+.au-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.au-product-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f3f4f6;
+  vertical-align: middle;
+}
+
+.au-product-thumb--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.au-cell-link {
+  color: #333;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.au-cell-link:hover {
+  color: #c45500;
+  text-decoration: underline;
+}
+
+.au-table-cell-ellipsis {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.au-table-cell-ellipsis--narrow {
+  max-width: 160px;
+}
+
+/* ---------- Status indicators ---------- */
+.au-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.au-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.au-status-dot--green {
+  background: #22c55e;
+}
+
+.au-status-dot--gray {
+  background: #d1d5db;
+}
+
+.au-status-dot--red {
+  background: #ef4444;
+}
+
+.au-status-text--green {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.au-status-text--gray {
+  color: #9ca3af;
+}
+
+.au-status-text--red {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* ---------- Actions ---------- */
+.au-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.au-btn-verify {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #22c55e;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-verify:hover {
+  background: #dcfce7;
+}
+
+.au-btn-unverify {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #555;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-unverify:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.au-btn-ban {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-ban:hover {
+  background: #fee2e2;
+}
+
+.au-btn-unban {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #22c55e;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-btn-unban:hover {
+  background: #dcfce7;
+}
+
+.au-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.au-role-select {
+  padding: 5px 28px 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: #F7F8FA;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.au-role-select:focus {
+  border-color: #FFD600;
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.15);
+}
+
+/* ---------- Pagination ---------- */
+.au-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.au-pagination span {
+  font-size: 14px;
+  color: #555;
+  font-weight: 700;
+}
+
+.au-pagination button {
+  padding: 8px 20px;
+  border-radius: 50px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.au-pagination button:hover:not(:disabled) {
+  border-color: #FFD600;
+  background: #FFD600;
+  color: #333;
+}
+
+.au-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .au-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .au-table-card {
+    border-radius: 16px;
+  }
+
+  .au-table thead th,
+  .au-table tbody td {
+    padding: 12px 14px;
+  }
+
+  .au-search {
+    max-width: 100%;
+  }
+
+  .au-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .au-search-row .au-filter-label {
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+
+  .au-search-row .au-search {
+    max-width: 100%;
+  }
+
+  .au-search-row .au-role-select {
+    width: 100%;
+    max-width: 100%;
+  }
+}

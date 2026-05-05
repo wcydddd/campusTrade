@@ -1,0 +1,235 @@
+Warning: The allowCypressEnv configuration option is enabled. This allows any browser code to read values from Cypress.env(). This is insecure and will be removed in a future major version.
+
+1. Replace Cypress.env() calls with cy.env() (for sensitive values) or Cypress.expose() (for public configuration)
+2. Set allowCypressEnv: false in your Cypress configuration to disable Cypress.env()
+
+Learn more: https://on.cypress.io/cypress-env-migration
+
+
+====================================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:        15.14.2                                                                        │
+  │ Browser:        Electron 138 (headless)                                                        │
+  │ Node Version:   v25.6.0 (/opt/homebrew/Cellar/node/25.6.0/bin/node)                            │
+  │ Specs:          6 found (ai_listing.cy.js, login.cy.js, message.cy.js, order.cy.js, registrati │
+  │                 on.cy.js, search.cy.js)                                                        │
+  │ Searched:       cypress/e2e/**/*.cy.js                                                         │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  ai_listing.cy.js                                                                (1 of 6)
+
+
+  AI Listing workflow
+    ✓ unauthenticated user is redirected away from /publish (226ms)
+    ✓ verified user uploads image → AI fills form → publish succeeds (6349ms)
+
+
+  2 passing (7s)
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        2                                                                                │
+  │ Passing:      2                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  0                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     6 seconds                                                                        │
+  │ Spec Ran:     ai_listing.cy.js                                                                 │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  login.cy.js                                                                     (2 of 6)
+
+
+  Login workflow
+    ✓ happy path: correct credentials log in and redirect home (1545ms)
+    ✓ rejects wrong password (HTTP 401) (1241ms)
+    ✓ rejects unknown email (HTTP 401) (1165ms)
+    ✓ preserves token across page reloads (session persistence) (509ms)
+
+
+  4 passing (5s)
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        4                                                                                │
+  │ Passing:      4                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  0                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     4 seconds                                                                        │
+  │ Spec Ran:     login.cy.js                                                                      │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  message.cy.js                                                                   (3 of 6)
+
+
+  Message workflow
+    ✓ verified user can send a message that persists in DB (1684ms)
+    ✓ recipient sees the message after sender persisted it (1663ms)
+    ✓ unauthenticated user is redirected away from /chat (402ms)
+
+
+  3 passing (4s)
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        3                                                                                │
+  │ Passing:      3                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  0                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     3 seconds                                                                        │
+  │ Spec Ran:     message.cy.js                                                                    │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  order.cy.js                                                                     (4 of 6)
+
+
+  Order workflow
+    ✓ happy path: buyer places order from product detail (1279ms)
+    ✓ seller sees pending order in MyOrders → can confirm (1524ms)
+    1) full lifecycle: pending → confirmed → completed
+
+
+  2 passing (3s)
+  1 failing
+
+  1) Order workflow
+       full lifecycle: pending → confirmed → completed:
+     AssertionError: partner-owned available product: expected undefined to exist
+      at Object.proxyGetter [as get] (http://localhost:5173/__cypress/runner/cypress_runner.js:81302:22)
+      at Context.eval (webpack://frontend/./cypress/e2e/order.cy.js:71:67)
+      at getRet (http://localhost:5173/__cypress/runner/cypress_runner.js:122944:20)
+
+
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        3                                                                                │
+  │ Passing:      2                                                                                │
+  │ Failing:      1                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     3 seconds                                                                        │
+  │ Spec Ran:     order.cy.js                                                                      │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /Users/wcy/Desktop/campusTrade-main/frontend/cypress/screenshots/order.cy.js/Ord    (2560x1440)
+     er workflow -- full lifecycle pending → confirmed → completed (failed).png                     
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  registration.cy.js                                                              (5 of 6)
+
+
+  Registration workflow
+    ✓ happy path: university email registers successfully (2381ms)
+    ✓ rejects non-university email (client-side validation) (1480ms)
+    ✓ rejects mismatched password confirmation (client-side) (1641ms)
+    ✓ rejects short password (<8 chars, client-side) (1417ms)
+    ✓ rejects unchecked terms agreement (1588ms)
+
+
+  5 passing (9s)
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        5                                                                                │
+  │ Passing:      5                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  0                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     8 seconds                                                                        │
+  │ Spec Ran:     registration.cy.js                                                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  search.cy.js                                                                    (6 of 6)
+
+
+  Search workflow
+    ✓ home page renders product list from /products (604ms)
+    ✓ search keyword triggers API call with search param (1013ms)
+    ✓ price range inputs trigger filtered API call (2879ms)
+
+
+  3 passing (5s)
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        3                                                                                │
+  │ Passing:      3                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  0                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     4 seconds                                                                        │
+  │ Spec Ran:     search.cy.js                                                                     │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+====================================================================================================
+
+  (Run Finished)
+
+
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ ✔  ai_listing.cy.js                         00:06        2        2        -        -        - │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✔  login.cy.js                              00:04        4        4        -        -        - │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✔  message.cy.js                            00:03        3        3        -        -        - │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✖  order.cy.js                              00:03        3        2        1        -        - │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✔  registration.cy.js                       00:08        5        5        -        -        - │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✔  search.cy.js                             00:04        3        3        -        -        - │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+    ✖  1 of 6 failed (17%)                      00:31       20       19        1        -        -  
+

@@ -1,0 +1,125 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 2,
+    "passes": 1,
+    "pending": 1,
+    "failures": 0,
+    "start": "2026-05-04T19:40:55.402Z",
+    "end": "2026-05-04T19:40:55.739Z",
+    "duration": 337,
+    "testsRegistered": 2,
+    "passPercent": 100,
+    "pendingPercent": 50,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "34249025-337b-445e-ac0c-b718359ea20f",
+      "title": "",
+      "fullFile": "cypress/e2e/ai_listing.cy.js",
+      "file": "cypress/e2e/ai_listing.cy.js",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "d72656d4-fd0f-4131-a42d-46f1dc5e81a2",
+          "title": "AI Listing workflow",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "unauthenticated user is redirected away from /publish",
+              "fullTitle": "AI Listing workflow unauthenticated user is redirected away from /publish",
+              "timedOut": null,
+              "duration": 272,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.visit('/publish');\n// ProtectedRoute 应当把未登录用户重定向到 /login\ncy.url({\n  timeout: 6000\n}).should('match', /login|home|\\/$/);",
+              "err": {},
+              "uuid": "5189c506-0a9a-4087-9ba6-9fb2bc6b477b",
+              "parentUUID": "d72656d4-fd0f-4131-a42d-46f1dc5e81a2",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "verified user uploads image → AI fills form → publish succeeds",
+              "fullTitle": "AI Listing workflow verified user uploads image → AI fills form → publish succeeds",
+              "timedOut": null,
+              "duration": 0,
+              "state": "pending",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": true,
+              "context": null,
+              "code": "cy.intercept('POST', '**/ai/analyze-and-save').as('aiSave');\ncy.intercept('POST', '**/products**').as('createProduct');\ncy.loginAsTestUser().then(() => {\n  cy.visit('/publish');\n  // 上传图片到隐藏 input\n  cy.get('input[type=file]').first().selectFile('cypress/fixtures/test_product.png', {\n    force: true\n  });\n  // 点 AI Smart Publish 按钮\n  cy.contains('button', /AI Smart Publish/i).click();\n  // CA2 目标：AI 响应 < 8s\n  const start = Date.now();\n  cy.wait('@aiSave', {\n    timeout: 15000\n  }).then(interception => {\n    const elapsed = Date.now() - start;\n    expect(interception.response.statusCode).to.eq(200);\n    expect(elapsed).to.be.lessThan(8000);\n    // AI 应返回 title/description/category\n    expect(interception.response.body.data).to.have.keys('title', 'description', 'category', 'keywords');\n  });\n  // 等表单被 AI 数据填充\n  cy.get('input[placeholder*=\"title\"]', {\n    timeout: 5000\n  }).should('not.have.value', '');\n  // 加价格（AI 不填这个字段）\n  cy.get('input[placeholder=\"0.00\"]').clear().type('29.99');\n  // 提交\n  cy.contains('button', /Confirm.*Publish/i).click();\n  cy.wait('@createProduct').then(interception => {\n    expect([200, 201]).to.include(interception.response.statusCode);\n  });\n});",
+              "err": {},
+              "uuid": "6953bb7e-6b5b-425f-9824-5f04b0f5da5e",
+              "parentUUID": "d72656d4-fd0f-4131-a42d-46f1dc5e81a2",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "5189c506-0a9a-4087-9ba6-9fb2bc6b477b"
+          ],
+          "failures": [],
+          "pending": [
+            "6953bb7e-6b5b-425f-9824-5f04b0f5da5e"
+          ],
+          "skipped": [],
+          "duration": 272,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}

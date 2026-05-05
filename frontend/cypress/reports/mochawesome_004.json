@@ -1,0 +1,181 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 5,
+    "passes": 5,
+    "pending": 0,
+    "failures": 0,
+    "start": "2026-05-04T19:41:14.816Z",
+    "end": "2026-05-04T19:41:23.175Z",
+    "duration": 8359,
+    "testsRegistered": 5,
+    "passPercent": 100,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "d42eac99-ab3d-4ca6-b23c-7f3dba97aebf",
+      "title": "",
+      "fullFile": "cypress/e2e/registration.cy.js",
+      "file": "cypress/e2e/registration.cy.js",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+          "title": "Registration workflow",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "happy path: university email registers successfully",
+              "fullTitle": "Registration workflow happy path: university email registers successfully",
+              "timedOut": null,
+              "duration": 2263,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "const stamp = Date.now();\nconst email = `cyptest${stamp}@university.edu`;\nconst username = `cyp${stamp}`;\ncy.intercept('POST', '**/auth/register').as('register');\ncy.visit('/register');\nfillForm(email, username, 'Password123!', 'Password123!');\ncy.contains('button', /Create Account/i).click();\ncy.wait('@register').then(interception => {\n  expect(interception.response.statusCode).to.eq(201);\n  expect(interception.response.body.email).to.eq(email);\n  expect(interception.response.body.is_verified).to.eq(false);\n});\n// 注册后页面应展示成功信息\ncy.contains(/Registered/i, {\n  timeout: 8000\n}).should('be.visible');",
+              "err": {},
+              "uuid": "bfdca089-7707-49df-94a3-472e701f633e",
+              "parentUUID": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "rejects non-university email (client-side validation)",
+              "fullTitle": "Registration workflow rejects non-university email (client-side validation)",
+              "timedOut": null,
+              "duration": 1455,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.visit('/register');\nfillForm('hacker@gmail.com', 'baduser', 'Password123!', 'Password123!');\ncy.contains('button', /Create Account/i).click();\n// 前端 isUniversityEmail() 拦截，不发请求\ncy.contains(/university email/i, {\n  timeout: 5000\n}).should('be.visible');",
+              "err": {},
+              "uuid": "46e74762-d0e5-48f5-a3fd-944f6ece292d",
+              "parentUUID": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "rejects mismatched password confirmation (client-side)",
+              "fullTitle": "Registration workflow rejects mismatched password confirmation (client-side)",
+              "timedOut": null,
+              "duration": 1601,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.visit('/register');\nfillForm('test@university.edu', 'testuser', 'Password123!', 'DifferentPassword!');\ncy.contains('button', /Create Account/i).click();\ncy.contains(/do not match|Passwords do not/i, {\n  timeout: 4000\n}).should('be.visible');",
+              "err": {},
+              "uuid": "0f9c9996-ee35-49da-8fb9-f1f3f64c97cb",
+              "parentUUID": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "rejects short password (<8 chars, client-side)",
+              "fullTitle": "Registration workflow rejects short password (<8 chars, client-side)",
+              "timedOut": null,
+              "duration": 1350,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.visit('/register');\nfillForm('test2@university.edu', 'testuser2', 'short1', 'short1');\ncy.contains('button', /Create Account/i).click();\ncy.contains(/at least 8/i, {\n  timeout: 4000\n}).should('be.visible');",
+              "err": {},
+              "uuid": "1f2fb13c-54e2-45f3-8944-6faea90792e7",
+              "parentUUID": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "rejects unchecked terms agreement",
+              "fullTitle": "Registration workflow rejects unchecked terms agreement",
+              "timedOut": null,
+              "duration": 1594,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.visit('/register');\nfillForm(`a${Date.now()}@university.edu`, 'testuser', 'Password123!', 'Password123!', /* agree= */false);\ncy.contains('button', /Create Account/i).click();\ncy.contains(/agree.*terms/i, {\n  timeout: 4000\n}).should('be.visible');",
+              "err": {},
+              "uuid": "cac48ace-3cb1-4e6d-918e-bd037271fb33",
+              "parentUUID": "b4920bc0-f1f9-48a6-80bf-769911e2078e",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "bfdca089-7707-49df-94a3-472e701f633e",
+            "46e74762-d0e5-48f5-a3fd-944f6ece292d",
+            "0f9c9996-ee35-49da-8fb9-f1f3f64c97cb",
+            "1f2fb13c-54e2-45f3-8944-6faea90792e7",
+            "cac48ace-3cb1-4e6d-918e-bd037271fb33"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 8263,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}

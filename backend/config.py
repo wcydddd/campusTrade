@@ -1,0 +1,63 @@
+from pydantic_settings import BaseSettings
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# 获取项目根目录
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = BASE_DIR / ".env"
+
+# 强制加载 .env 文件
+load_dotenv(ENV_FILE)
+
+print(f"[config] .env path: {ENV_FILE}, exists: {ENV_FILE.exists()}")
+
+class Settings(BaseSettings):
+    # MongoDB (supports both local and Atlas mongodb+srv:// URIs)
+    mongodb_uri: str = "mongodb://localhost:27017/campustrade"
+    mongodb_db_name: str = "campustrade"
+    
+    # JWT
+    jwt_secret: str = "super-secret-key-123456"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 10080
+    
+    # OpenAI
+    openai_api_key: str = ""  # ← 从 .env 读取
+    
+    # Email
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    # Some cloud hosts have broken IPv6 egress; Gmail then raises Errno 101 (network unreachable).
+    smtp_force_ipv4: bool = False
+    # Use implicit TLS on port 465 (Gmail). Some hosts block or throttle 587 STARTTLS but allow 465.
+    smtp_use_ssl: bool = False
+    smtp_timeout_seconds: int = 45
+
+    # Resend (HTTPS) — works on Railway Hobby; see https://resend.com/docs
+    resend_api_key: str = ""
+    # Example after domain verify: "CampusTrade <noreply@yourdomain.com>"
+    # Sandbox: "onboarding@resend.dev" only sends to your Resend-account email unless domain added.
+    resend_from: str = "CampusTrade <onboarding@resend.dev>"
+    
+    # Frontend URL (used in password-reset emails)
+    frontend_url: str = "http://localhost:5173"
+
+    # Password reset
+    password_reset_expire_minutes: int = 30
+
+    # App Settings
+    allowed_email_domains: str = "@liverpool.ac.uk,@university.edu,@student.ac.uk"
+    upload_dir: str = "./uploads"
+    max_upload_size_mb: int = 10
+    
+    class Config:
+        env_file = str(ENV_FILE)
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        extra = "ignore"
+
+settings = Settings()
+print("[config] Settings loaded successfully")

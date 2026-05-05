@@ -1,0 +1,311 @@
+/* ============================================================
+   AdminReview.css — Xianyu-style Product Review dashboard
+   ============================================================ */
+
+.ar-page {
+  min-height: 100vh;
+  padding: 28px 24px;
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+
+/* ---------- Header ---------- */
+.ar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.ar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ar-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.ar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: #FFF8DC;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ar-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFD600;
+  flex-shrink: 0;
+}
+
+/* ---------- Nav links ---------- */
+.ar-nav {
+  display: flex;
+  gap: 18px;
+}
+
+.ar-nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ar-nav-link:hover {
+  color: #FFD600;
+}
+
+/* ---------- Messages ---------- */
+.ar-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
+
+.ar-loading {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.ar-clear {
+  text-align: center;
+  padding: 60px 20px;
+  color: #52c41a;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* ---------- Table card ---------- */
+.ar-table-card {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Table header */
+.ar-table thead th {
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #F0F0F0;
+  background: transparent;
+}
+
+/* Table rows */
+.ar-table tbody tr {
+  border-bottom: 1px solid #F0F0F0;
+  transition: background 0.12s;
+}
+
+.ar-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ar-table tbody tr:hover {
+  background: #FAFAFA;
+}
+
+.ar-table tbody td {
+  padding: 18px 20px;
+  vertical-align: middle;
+  color: #555;
+}
+
+/* Title cell */
+.ar-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ar-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f0f0f0;
+}
+
+.ar-thumb-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  font-size: 16px;
+}
+
+.ar-title-link {
+  font-weight: 700;
+  color: #333 !important;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ar-title-link:hover {
+  color: #FFD600 !important;
+}
+
+/* Price cell */
+.ar-price {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Submitted cell */
+.ar-date {
+  font-size: 12px;
+  color: #999;
+}
+
+/* ---------- Action buttons ---------- */
+.ar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ar-btn-approve {
+  padding: 6px 18px;
+  border-radius: 50px;
+  border: none;
+  background: #FFD600;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ar-btn-approve:hover {
+  background: #f5c800;
+  box-shadow: 0 2px 8px rgba(255, 214, 0, 0.35);
+}
+
+.ar-btn-approve:active {
+  background: #e6b800;
+}
+
+.ar-btn-approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ar-btn-reject {
+  padding: 6px 18px;
+  border-radius: 50px;
+  border: none;
+  background: #F2F2F2;
+  color: #E74C3C;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ar-btn-reject:hover {
+  background: #fde8e8;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.15);
+}
+
+.ar-btn-reject:active {
+  background: #fcc;
+}
+
+.ar-btn-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Pagination ---------- */
+.ar-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.ar-pagination span {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.ar-pagination button {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ar-pagination button:hover:not(:disabled) {
+  border-color: #FFD600;
+  background: #FFFDE7;
+}
+
+.ar-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .ar-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .ar-table-card {
+    border-radius: 16px;
+  }
+
+  .ar-table thead th,
+  .ar-table tbody td {
+    padding: 12px 14px;
+  }
+}

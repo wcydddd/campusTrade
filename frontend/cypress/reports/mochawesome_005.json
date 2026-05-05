@@ -1,0 +1,143 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 3,
+    "passes": 3,
+    "pending": 0,
+    "failures": 0,
+    "start": "2026-05-04T19:41:23.745Z",
+    "end": "2026-05-04T19:41:28.236Z",
+    "duration": 4491,
+    "testsRegistered": 3,
+    "passPercent": 100,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "00f69009-39ef-433e-84db-ce8fe8cde1e0",
+      "title": "",
+      "fullFile": "cypress/e2e/search.cy.js",
+      "file": "cypress/e2e/search.cy.js",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "3b18199f-f9f1-4575-91e5-551c3eadbb63",
+          "title": "Search workflow",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "home page renders product list from /products",
+              "fullTitle": "Search workflow home page renders product list from /products",
+              "timedOut": null,
+              "duration": 624,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.intercept('GET', '**/products**').as('listProducts');\ncy.visit('/');\ncy.wait('@listProducts').then(interception => {\n  expect(interception.response.statusCode).to.eq(200);\n  expect(interception.response.body).to.have.length.greaterThan(0);\n});",
+              "err": {},
+              "uuid": "6a22c24e-0b83-418e-adf1-58ac86d910de",
+              "parentUUID": "3b18199f-f9f1-4575-91e5-551c3eadbb63",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "search keyword triggers API call with search param",
+              "fullTitle": "Search workflow search keyword triggers API call with search param",
+              "timedOut": null,
+              "duration": 985,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.intercept('GET', '**/products**').as('listProducts');\ncy.visit('/');\ncy.wait('@listProducts');\n// 输入关键词，每次 onChange 都会触发新的请求\ncy.get('input[placeholder*=\"Search\"]').first().type('Test');\n// 等到带 search=Test 的请求出现\ncy.wait('@listProducts', {\n  timeout: 10000\n});\ncy.get('@listProducts.all').should(interceptions => {\n  // 至少有一条请求 URL 包含 search=Test\n  const matched = interceptions.some(i => /search=Test/i.test(i.request.url));\n  expect(matched, 'expected at least one request with search=Test').to.be.true;\n});",
+              "err": {},
+              "uuid": "003e686b-14ed-4120-b470-746b312380f3",
+              "parentUUID": "3b18199f-f9f1-4575-91e5-551c3eadbb63",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "price range inputs trigger filtered API call",
+              "fullTitle": "Search workflow price range inputs trigger filtered API call",
+              "timedOut": null,
+              "duration": 2775,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.intercept('GET', '**/products**').as('listProducts');\ncy.visit('/');\ncy.wait('@listProducts');\ncy.get('input[placeholder*=\"Min\"]').first().type('20');\ncy.get('input[placeholder*=\"Max\"]').first().type('80');\n// 让 React 把所有 onChange 都跑完\ncy.wait(2000);\ncy.get('@listProducts.all').should(interceptions => {\n  const hasMin = interceptions.some(i => /min_price=20/i.test(i.request.url));\n  const hasMax = interceptions.some(i => /max_price=80/i.test(i.request.url));\n  expect(hasMin, 'expected request with min_price=20').to.be.true;\n  expect(hasMax, 'expected request with max_price=80').to.be.true;\n});",
+              "err": {},
+              "uuid": "52537a84-ff47-4cb2-8379-95de1e65e29c",
+              "parentUUID": "3b18199f-f9f1-4575-91e5-551c3eadbb63",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "6a22c24e-0b83-418e-adf1-58ac86d910de",
+            "003e686b-14ed-4120-b470-746b312380f3",
+            "52537a84-ff47-4cb2-8379-95de1e65e29c"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 4384,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}
