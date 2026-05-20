@@ -44,6 +44,47 @@ describe('Order workflow', () => {
       buyerToken = res.body.access_token
       buyerUser = res.body.user
     })
+
+    // ── Inventory cleanup ────────────────────────────────────────────
+    // 前几次 run 可能在 partner 名下留下 pending/confirmed 订单，把
+    // seed 出来的 available 商品全部锁成 reserved/sold。这里以 partner
+    // 身份把所有未完结订单 cancel 掉（cancel 会把商品状态还原成
+    // available），确保后面三个用例各能独立拿到一件 partner 商品。
+    cy.then(() => {
+      cy.request({
+        method: 'GET',
+        url: `${apiBase}/orders?role=seller&limit=500`,
+        headers: { Authorization: `Bearer ${partnerToken}` },
+      }).then((res) => {
+        const stuck = (res.body || []).filter(
+          (o) => o.status === 'pending' || o.status === 'confirmed'
+        )
+        stuck.forEach((o) => {
+          cy.request({
+            method: 'PATCH',
+            url: `${apiBase}/orders/${o.id}/cancel`,
+            headers: { Authorization: `Bearer ${partnerToken}` },
+            failOnStatusCode: false,
+          })
+        })
+      })
+    })
+
+    // 清理完后，确认 partner 名下至少有 3 件 available 商品；不够就早失败
+    cy.then(() => {
+      cy.request({
+        method: 'GET',
+        url: `${apiBase}/products?limit=200`,
+      }).then((res) => {
+        const mine = (res.body || []).filter(
+          (p) => p.seller_id === partnerUser.id && p.status === 'available'
+        )
+        expect(
+          mine.length,
+          'partner-owned available products after cleanup (need >= 3; run backend/scripts/seed_cypress_users.py if 0)'
+        ).to.be.at.least(3)
+      })
+    })
   })
 
   beforeEach(() => {

@@ -6,7 +6,7 @@ Warning: The allowCypressEnv configuration option is enabled. This allows any br
 Learn more: https://on.cypress.io/cypress-env-migration
 
 
-====================================================================================================
+================================================================================
 
   (Run Starting)
 
@@ -26,11 +26,11 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   AI Listing workflow
-    ✓ unauthenticated user is redirected away from /publish (226ms)
-    ✓ verified user uploads image → AI fills form → publish succeeds (6349ms)
+    ✓ unauthenticated user is redirected away from /publish (274ms)
+    ✓ verified user uploads image → AI fills form → publish succeeds (5056ms)
 
 
-  2 passing (7s)
+  2 passing (5s)
 
 
   (Results)
@@ -43,7 +43,7 @@ Learn more: https://on.cypress.io/cypress-env-migration
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
   │ Video:        false                                                                            │
-  │ Duration:     6 seconds                                                                        │
+  │ Duration:     5 seconds                                                                        │
   │ Spec Ran:     ai_listing.cy.js                                                                 │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -54,13 +54,13 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   Login workflow
-    ✓ happy path: correct credentials log in and redirect home (1545ms)
-    ✓ rejects wrong password (HTTP 401) (1241ms)
-    ✓ rejects unknown email (HTTP 401) (1165ms)
-    ✓ preserves token across page reloads (session persistence) (509ms)
+    ✓ happy path: correct credentials log in and redirect home (1338ms)
+    ✓ rejects wrong password (HTTP 401) (1182ms)
+    ✓ rejects unknown email (HTTP 401) (1109ms)
+    ✓ preserves token across page reloads (session persistence) (382ms)
 
 
-  4 passing (5s)
+  4 passing (4s)
 
 
   (Results)
@@ -84,12 +84,12 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   Message workflow
-    ✓ verified user can send a message that persists in DB (1684ms)
-    ✓ recipient sees the message after sender persisted it (1663ms)
-    ✓ unauthenticated user is redirected away from /chat (402ms)
+    ✓ verified user can send a message that persists in DB (1406ms)
+    ✓ recipient sees the message after sender persisted it (1014ms)
+    ✓ unauthenticated user is redirected away from /chat (312ms)
 
 
-  3 passing (4s)
+  3 passing (3s)
 
 
   (Results)
@@ -102,7 +102,7 @@ Learn more: https://on.cypress.io/cypress-env-migration
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
   │ Video:        false                                                                            │
-  │ Duration:     3 seconds                                                                        │
+  │ Duration:     2 seconds                                                                        │
   │ Spec Ran:     message.cy.js                                                                    │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -113,43 +113,27 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   Order workflow
-    ✓ happy path: buyer places order from product detail (1279ms)
-    ✓ seller sees pending order in MyOrders → can confirm (1524ms)
-    1) full lifecycle: pending → confirmed → completed
+    ✓ happy path: buyer places order from product detail (992ms)
+    ✓ seller sees pending order in MyOrders → can confirm (394ms)
+    ✓ full lifecycle: pending → confirmed → completed (372ms)
 
 
-  2 passing (3s)
-  1 failing
-
-  1) Order workflow
-       full lifecycle: pending → confirmed → completed:
-     AssertionError: partner-owned available product: expected undefined to exist
-      at Object.proxyGetter [as get] (http://localhost:5173/__cypress/runner/cypress_runner.js:81302:22)
-      at Context.eval (webpack://frontend/./cypress/e2e/order.cy.js:71:67)
-      at getRet (http://localhost:5173/__cypress/runner/cypress_runner.js:122944:20)
-
-
+  3 passing (2s)
 
 
   (Results)
 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Tests:        3                                                                                │
-  │ Passing:      2                                                                                │
-  │ Failing:      1                                                                                │
+  │ Passing:      3                                                                                │
+  │ Failing:      0                                                                                │
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
-  │ Screenshots:  1                                                                                │
+  │ Screenshots:  0                                                                                │
   │ Video:        false                                                                            │
-  │ Duration:     3 seconds                                                                        │
+  │ Duration:     1 second                                                                         │
   │ Spec Ran:     order.cy.js                                                                      │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /Users/wcy/Desktop/campusTrade-main/frontend/cypress/screenshots/order.cy.js/Ord    (2560x1440)
-     er workflow -- full lifecycle pending → confirmed → completed (failed).png                     
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -158,14 +142,14 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   Registration workflow
-    ✓ happy path: university email registers successfully (2381ms)
-    ✓ rejects non-university email (client-side validation) (1480ms)
-    ✓ rejects mismatched password confirmation (client-side) (1641ms)
-    ✓ rejects short password (<8 chars, client-side) (1417ms)
-    ✓ rejects unchecked terms agreement (1588ms)
+    ✓ happy path: university email registers successfully (2223ms)
+    ✓ rejects non-university email (client-side validation) (1449ms)
+    ✓ rejects mismatched password confirmation (client-side) (1646ms)
+    ✓ rejects short password (<8 chars, client-side) (1392ms)
+    ✓ rejects unchecked terms agreement (1612ms)
 
 
-  5 passing (9s)
+  5 passing (8s)
 
 
   (Results)
@@ -189,12 +173,12 @@ Learn more: https://on.cypress.io/cypress-env-migration
 
 
   Search workflow
-    ✓ home page renders product list from /products (604ms)
-    ✓ search keyword triggers API call with search param (1013ms)
-    ✓ price range inputs trigger filtered API call (2879ms)
+    ✓ home page renders product list from /products (526ms)
+    ✓ search keyword triggers API call with search param (873ms)
+    ✓ price range inputs trigger filtered API call (2776ms)
 
 
-  3 passing (5s)
+  3 passing (4s)
 
 
   (Results)
@@ -212,24 +196,24 @@ Learn more: https://on.cypress.io/cypress-env-migration
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
-====================================================================================================
+================================================================================
 
   (Run Finished)
 
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  ai_listing.cy.js                         00:06        2        2        -        -        - │
+  │ ✔  ai_listing.cy.js                         00:05        2        2        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ ✔  login.cy.js                              00:04        4        4        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✔  message.cy.js                            00:03        3        3        -        -        - │
+  │ ✔  message.cy.js                            00:02        3        3        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✖  order.cy.js                              00:03        3        2        1        -        - │
+  │ ✔  order.cy.js                              00:01        3        3        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ ✔  registration.cy.js                       00:08        5        5        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ ✔  search.cy.js                             00:04        3        3        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✖  1 of 6 failed (17%)                      00:31       20       19        1        -        -  
+    ✔  All specs passed!                        00:26       20       20        -        -        -  
 

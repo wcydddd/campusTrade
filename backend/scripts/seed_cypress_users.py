@@ -15,13 +15,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv("/Users/wcy/Desktop/campusTrade-main/.env")
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 
 URI = os.environ["MONGODB_URI"]
-DB  = os.environ["MONGODB_DB_NAME"]
+DB  = os.environ.get("MONGODB_DB_NAME", "campustrade")
 
 USERS = [
     ("perftest@university.edu",    "perftester",  "PerfTest123!"),

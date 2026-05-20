@@ -5,9 +5,9 @@
     "passes": 3,
     "pending": 0,
     "failures": 0,
-    "start": "2026-05-04T19:41:01.506Z",
-    "end": "2026-05-04T19:41:05.607Z",
-    "duration": 4101,
+    "start": "2026-05-20T19:58:59.607Z",
+    "end": "2026-05-20T19:59:02.251Z",
+    "duration": 2644,
     "testsRegistered": 3,
     "passPercent": 100,
     "pendingPercent": 0,
@@ -18,7 +18,7 @@
   },
   "results": [
     {
-      "uuid": "dfa43789-3160-405d-9f49-c2dc3c841136",
+      "uuid": "2b470e0b-e955-4a68-b074-4b79e4f5b06c",
       "title": "",
       "fullFile": "cypress/e2e/message.cy.js",
       "file": "cypress/e2e/message.cy.js",
@@ -27,7 +27,7 @@
       "tests": [],
       "suites": [
         {
-          "uuid": "c4ca8a42-769c-4b8c-8744-fb2b18a1ab50",
+          "uuid": "10d11b23-52a4-4226-855d-71c12d338b3b",
           "title": "Message workflow",
           "fullFile": "",
           "file": "",
@@ -38,7 +38,7 @@
               "title": "verified user can send a message that persists in DB",
               "fullTitle": "Message workflow verified user can send a message that persists in DB",
               "timedOut": null,
-              "duration": 1841,
+              "duration": 1350,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -47,8 +47,8 @@
               "context": null,
               "code": "cy.intercept('POST', '**/messages**').as('sendMessage');\ncy.loginAsTestUser().then(() => {\n  cy.visit(`/chat/${partnerId}`);\n  // 等输入框可用\n  cy.get('input[placeholder*=\"Type a message\"]', {\n    timeout: 6000\n  }).should('be.visible');\n  const text = `Cypress test message ${Date.now()}`;\n  cy.get('input[placeholder*=\"Type a message\"]').type(text);\n  cy.contains('button', /^Send$/).click();\n  // 消息应出现在聊天窗口里\n  cy.contains(text, {\n    timeout: 5000\n  }).should('be.visible');\n  // 同时通过 REST API 验证消息真的存到了 DB\n  cy.window().its('localStorage.token').then(token => {\n    cy.request({\n      method: 'GET',\n      url: `${Cypress.env('apiBase')}/messages?other_user_id=${partnerId}`,\n      headers: {\n        Authorization: `Bearer ${token}`\n      }\n    }).then(res => {\n      expect(res.status).to.eq(200);\n      const found = res.body.some(m => m.content === text);\n      expect(found, 'message should be stored in DB').to.be.true;\n    });\n  });\n});",
               "err": {},
-              "uuid": "d5188c45-f192-4b17-81a1-4c83ac9e2fa6",
-              "parentUUID": "c4ca8a42-769c-4b8c-8744-fb2b18a1ab50",
+              "uuid": "547afb87-40f9-43f9-9b58-323a620daf04",
+              "parentUUID": "10d11b23-52a4-4226-855d-71c12d338b3b",
               "isHook": false,
               "skipped": false
             },
@@ -56,7 +56,7 @@
               "title": "recipient sees the message after sender persisted it",
               "fullTitle": "Message workflow recipient sees the message after sender persisted it",
               "timedOut": null,
-              "duration": 1779,
+              "duration": 963,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -65,8 +65,8 @@
               "context": null,
               "code": "const text = `cross-account msg ${Date.now()}`;\n// sender (perftest) 直接通过 API 发消息（绕开 WebSocket 时序问题）\ncy.loginAsTestUser().then(() => {\n  cy.window().its('localStorage.token').then(token => {\n    cy.request({\n      method: 'POST',\n      url: `${Cypress.env('apiBase')}/messages`,\n      headers: {\n        Authorization: `Bearer ${token}`\n      },\n      body: {\n        to_user_id: partnerId,\n        content: text\n      }\n    }).then(res => {\n      expect(res.status).to.be.oneOf([200, 201]);\n    });\n  });\n});\n// 切换到 partner 登录，UI 上能看到这条消息\ncy.clearLocalStorage();\ncy.apiLogin(Cypress.env('partnerEmail'), Cypress.env('testPassword')).then(body => {\n  const myId = body.user.id;\n  // 拿到 perftest 的 user_id\n  cy.request({\n    method: 'GET',\n    url: `${Cypress.env('apiBase')}/auth/login`,\n    failOnStatusCode: false\n  });\n  cy.request({\n    method: 'POST',\n    url: `${Cypress.env('apiBase')}/auth/login`,\n    body: {\n      email: Cypress.env('testEmail'),\n      password: Cypress.env('testPassword')\n    },\n    headers: {\n      'X-Forwarded-For': `10.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`\n    }\n  }).then(perftestRes => {\n    const senderId = perftestRes.body.user.id;\n    // 用 partner 账号回到主线，访问 /chat/<sender>\n    cy.window().then(win => {\n      win.localStorage.setItem('token', body.access_token);\n      win.localStorage.setItem('user', JSON.stringify(body.user));\n    });\n    cy.visit(`/chat/${senderId}`);\n    cy.contains(text, {\n      timeout: 6000\n    }).should('be.visible');\n  });\n});",
               "err": {},
-              "uuid": "f04bd10b-3dc6-4176-9e92-4371bd91806c",
-              "parentUUID": "c4ca8a42-769c-4b8c-8744-fb2b18a1ab50",
+              "uuid": "adb4f35a-b86b-4523-adf2-913d41f57229",
+              "parentUUID": "10d11b23-52a4-4226-855d-71c12d338b3b",
               "isHook": false,
               "skipped": false
             },
@@ -74,7 +74,7 @@
               "title": "unauthenticated user is redirected away from /chat",
               "fullTitle": "Message workflow unauthenticated user is redirected away from /chat",
               "timedOut": null,
-              "duration": 449,
+              "duration": 307,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -83,22 +83,22 @@
               "context": null,
               "code": "cy.visit(`/chat/${partnerId}`);\n// ProtectedRoute 应当把未登录用户重定向掉\ncy.url({\n  timeout: 6000\n}).should('match', /login|home|\\/$/);",
               "err": {},
-              "uuid": "d4ce8479-44f7-4d5b-9dd7-cf78eb0a646c",
-              "parentUUID": "c4ca8a42-769c-4b8c-8744-fb2b18a1ab50",
+              "uuid": "5df5d37d-2dfa-4564-90e7-347d413ad741",
+              "parentUUID": "10d11b23-52a4-4226-855d-71c12d338b3b",
               "isHook": false,
               "skipped": false
             }
           ],
           "suites": [],
           "passes": [
-            "d5188c45-f192-4b17-81a1-4c83ac9e2fa6",
-            "f04bd10b-3dc6-4176-9e92-4371bd91806c",
-            "d4ce8479-44f7-4d5b-9dd7-cf78eb0a646c"
+            "547afb87-40f9-43f9-9b58-323a620daf04",
+            "adb4f35a-b86b-4523-adf2-913d41f57229",
+            "5df5d37d-2dfa-4564-90e7-347d413ad741"
           ],
           "failures": [],
           "pending": [],
           "skipped": [],
-          "duration": 4069,
+          "duration": 2620,
           "root": false,
           "rootEmpty": false,
           "_timeout": 2000
@@ -135,7 +135,8 @@
         "reportDir": "cypress/reports",
         "overwrite": false,
         "html": false,
-        "json": true
+        "json": true,
+        "reportFilename": "mochawesome"
       },
       "version": "6.3.2"
     }

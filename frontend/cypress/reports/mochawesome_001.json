@@ -5,9 +5,9 @@
     "passes": 4,
     "pending": 0,
     "failures": 0,
-    "start": "2026-05-04T19:40:56.422Z",
-    "end": "2026-05-04T19:41:00.929Z",
-    "duration": 4507,
+    "start": "2026-05-20T19:58:54.915Z",
+    "end": "2026-05-20T19:58:59.004Z",
+    "duration": 4089,
     "testsRegistered": 4,
     "passPercent": 100,
     "pendingPercent": 0,
@@ -18,7 +18,7 @@
   },
   "results": [
     {
-      "uuid": "483cbe2a-92e3-411d-8c17-7bd5ad44f2cc",
+      "uuid": "5261e3a5-698e-4901-85a5-6f3253c6df97",
       "title": "",
       "fullFile": "cypress/e2e/login.cy.js",
       "file": "cypress/e2e/login.cy.js",
@@ -27,7 +27,7 @@
       "tests": [],
       "suites": [
         {
-          "uuid": "68835471-eb2c-4da1-b623-059443b5cdf6",
+          "uuid": "d59af5af-26e4-47ae-ba6b-0b9dc49ddb98",
           "title": "Login workflow",
           "fullFile": "",
           "file": "",
@@ -38,7 +38,7 @@
               "title": "happy path: correct credentials log in and redirect home",
               "fullTitle": "Login workflow happy path: correct credentials log in and redirect home",
               "timedOut": null,
-              "duration": 1440,
+              "duration": 1334,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -47,8 +47,8 @@
               "context": null,
               "code": "cy.intercept('POST', '**/auth/login').as('login');\ncy.visit('/login');\ncy.get('input[placeholder*=\"university email\"]').type(Cypress.env('testEmail'));\ncy.get('input[placeholder*=\"••\"]').type(Cypress.env('testPassword'));\ncy.contains('button', /Sign in/i).click();\ncy.wait('@login').then(interception => {\n  expect(interception.response.statusCode).to.eq(200);\n  expect(interception.response.body.access_token).to.be.a('string');\n  expect(interception.response.body.user.email).to.eq(Cypress.env('testEmail'));\n});\n// 登录成功后 token 应进 storage（默认 sessionStorage，rememberMe=true 时进 localStorage）\ncy.window().then(win => {\n  const token = win.sessionStorage.getItem('token') || win.localStorage.getItem('token');\n  expect(token, 'token in storage').to.match(/^eyJ/);\n});\n// 应跳转到首页（或某个已登录页面）\ncy.url({\n  timeout: 6000\n}).should('not.include', '/login');",
               "err": {},
-              "uuid": "2f096780-149f-42d3-8bf3-4f3d10e4deb1",
-              "parentUUID": "68835471-eb2c-4da1-b623-059443b5cdf6",
+              "uuid": "99abc600-9659-4c2d-8706-be6c74675129",
+              "parentUUID": "d59af5af-26e4-47ae-ba6b-0b9dc49ddb98",
               "isHook": false,
               "skipped": false
             },
@@ -56,7 +56,7 @@
               "title": "rejects wrong password (HTTP 401)",
               "fullTitle": "Login workflow rejects wrong password (HTTP 401)",
               "timedOut": null,
-              "duration": 1316,
+              "duration": 1181,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -65,8 +65,8 @@
               "context": null,
               "code": "cy.intercept('POST', '**/auth/login').as('login');\ncy.visit('/login');\ncy.get('input[placeholder*=\"university email\"]').type(Cypress.env('testEmail'));\ncy.get('input[placeholder*=\"••\"]').type('WrongPassword999!');\ncy.contains('button', /Sign in/i).click();\ncy.wait('@login').then(interception => {\n  expect(interception.response.statusCode).to.eq(401);\n});\n// 错误信息应显示\ncy.contains(/Invalid|Incorrect|wrong|password/i, {\n  timeout: 5000\n}).should('be.visible');\n// 任何 storage 都不应有 token\ncy.window().then(win => {\n  expect(win.localStorage.getItem('token')).to.be.null;\n  expect(win.sessionStorage.getItem('token')).to.be.null;\n});",
               "err": {},
-              "uuid": "aed0e08c-1fdf-4f72-88a9-49037c8fb128",
-              "parentUUID": "68835471-eb2c-4da1-b623-059443b5cdf6",
+              "uuid": "be09b9e7-84c1-433c-800e-723bf65f48dd",
+              "parentUUID": "d59af5af-26e4-47ae-ba6b-0b9dc49ddb98",
               "isHook": false,
               "skipped": false
             },
@@ -74,7 +74,7 @@
               "title": "rejects unknown email (HTTP 401)",
               "fullTitle": "Login workflow rejects unknown email (HTTP 401)",
               "timedOut": null,
-              "duration": 1156,
+              "duration": 1109,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -83,8 +83,8 @@
               "context": null,
               "code": "cy.intercept('POST', '**/auth/login').as('login');\ncy.visit('/login');\ncy.get('input[placeholder*=\"university email\"]').type('definitelydoesnotexist@university.edu');\ncy.get('input[placeholder*=\"••\"]').type('Password123!');\ncy.contains('button', /Sign in/i).click();\ncy.wait('@login').then(interception => {\n  expect(interception.response.statusCode).to.eq(401);\n});\ncy.contains(/Invalid|Incorrect/i, {\n  timeout: 5000\n}).should('be.visible');",
               "err": {},
-              "uuid": "429500e0-2fc0-493a-b78c-37f56660a46e",
-              "parentUUID": "68835471-eb2c-4da1-b623-059443b5cdf6",
+              "uuid": "dafdf2a4-e0be-46f4-ac4c-3183768b02d2",
+              "parentUUID": "d59af5af-26e4-47ae-ba6b-0b9dc49ddb98",
               "isHook": false,
               "skipped": false
             },
@@ -92,7 +92,7 @@
               "title": "preserves token across page reloads (session persistence)",
               "fullTitle": "Login workflow preserves token across page reloads (session persistence)",
               "timedOut": null,
-              "duration": 521,
+              "duration": 393,
               "state": "passed",
               "speed": "fast",
               "pass": true,
@@ -101,23 +101,23 @@
               "context": null,
               "code": "cy.loginAsTestUser();\ncy.visit('/');\ncy.window().then(win => {\n  expect(win.localStorage.getItem('token')).to.match(/^eyJ/);\n});\n// reload — token 应仍在\ncy.reload();\ncy.window().then(win => {\n  expect(win.localStorage.getItem('token')).to.match(/^eyJ/);\n});",
               "err": {},
-              "uuid": "38fa9334-7454-4476-b2c1-bfaf0c0cd9c6",
-              "parentUUID": "68835471-eb2c-4da1-b623-059443b5cdf6",
+              "uuid": "a727008e-c952-456d-b600-c02d3b420660",
+              "parentUUID": "d59af5af-26e4-47ae-ba6b-0b9dc49ddb98",
               "isHook": false,
               "skipped": false
             }
           ],
           "suites": [],
           "passes": [
-            "2f096780-149f-42d3-8bf3-4f3d10e4deb1",
-            "aed0e08c-1fdf-4f72-88a9-49037c8fb128",
-            "429500e0-2fc0-493a-b78c-37f56660a46e",
-            "38fa9334-7454-4476-b2c1-bfaf0c0cd9c6"
+            "99abc600-9659-4c2d-8706-be6c74675129",
+            "be09b9e7-84c1-433c-800e-723bf65f48dd",
+            "dafdf2a4-e0be-46f4-ac4c-3183768b02d2",
+            "a727008e-c952-456d-b600-c02d3b420660"
           ],
           "failures": [],
           "pending": [],
           "skipped": [],
-          "duration": 4433,
+          "duration": 4017,
           "root": false,
           "rootEmpty": false,
           "_timeout": 2000
@@ -154,7 +154,8 @@
         "reportDir": "cypress/reports",
         "overwrite": false,
         "html": false,
-        "json": true
+        "json": true,
+        "reportFilename": "mochawesome"
       },
       "version": "6.3.2"
     }
